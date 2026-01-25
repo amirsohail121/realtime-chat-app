@@ -11,7 +11,15 @@ export function ChatProvider({ children }) {
   const [chatList, setChatList] = useState([
     "Rahul",
     "Ayesha",
-    "Team Group"
+    "Team Group",
+    "Project Alpha",
+    "Family",
+    "Friends",
+    "Book Club",
+    "Work Buddies",
+    "Gaming Squad",
+ 
+
   ]);
 
   const [messages, setMessages] = useState({
