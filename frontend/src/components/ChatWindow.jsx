@@ -1,10 +1,27 @@
 import { useContext } from "react";
 import { ChatContext } from "../context/ChatContext";
 import Topbar from "../components/Topbar";
-import { FiMessageCircle , FiSend} from "react-icons/fi";
+import { FiMessageCircle, FiSend } from "react-icons/fi";
+import { useState } from "react";
 
 const ChatWindow = () => {
-  const { selectedChat, messages } = useContext(ChatContext);
+  const { selectedChat, messages, addMessage } = useContext(ChatContext);
+  const [messageInput, setMessageInput] = useState("");
+
+  const sendMessage = () => {
+    if (!messageInput.trim()) return;
+
+
+    addMessage(selectedChat, {
+      sender: "user",
+      text: messageInput,
+      time: new Date().toLocaleTimeString()
+    });
+
+
+    setMessageInput("");
+  };
+
 
   if (!selectedChat) {
     return (
@@ -33,6 +50,7 @@ const ChatWindow = () => {
                 }`}
             >
               <p>{msg.text || msg}</p>
+              
             </div>
           </div>
         ))}
@@ -41,11 +59,14 @@ const ChatWindow = () => {
         <div className="flex gap-2">
           <input
             type="text"
+            value={messageInput}
+            onChange={(e) => setMessageInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Type a message..."
             className="flex-1 text-black px-4 py-2 border rounded-lg"
-            
+
           />
-          <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+          <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600" onClick={sendMessage}>
             <FiSend size={20} />
           </button>
         </div>

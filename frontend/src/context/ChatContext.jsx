@@ -14,13 +14,13 @@ export function ChatProvider({ children }) {
     "Team Group",
     "Project Alpha",
     "Family",
-    "Friends",
-    "Book Club",
-    "Work Buddies",
-    "Gaming Squad",
- 
-
   ]);
+  const addMessage = (chatName, message) => {
+    setMessages(prev => ({
+      ...prev,
+      [chatName]: [...(prev[chatName] || []), message]
+    }));
+  };
 
   const [messages, setMessages] = useState({
     Rahul: ["Hi", "How are you?"],
@@ -36,7 +36,8 @@ export function ChatProvider({ children }) {
         setSelectedChat,
         chatList,
         messages,
-        setMessages
+        setMessages,
+        addMessage
       }}
     >
       {children}
