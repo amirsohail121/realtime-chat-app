@@ -25,7 +25,7 @@ const Sidebar = () => {
                 onClick={() => setSelectedChat(chat)}
                 className="p-4 cursor-pointer"
               >
-                {chat}
+                {chat?.name}
               </div>
             ))
           ) : (

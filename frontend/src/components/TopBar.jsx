@@ -13,13 +13,13 @@ const Topbar = () => {
       <div className="flex items-center gap-3">
         {/* Avatar */}
         <div className="w-10 h-10 rounded-full bg-green-500  flex items-center justify-center font-bold">
-          {selectedChat ? selectedChat[0] : "?"}
+          {selectedChat?.name ? selectedChat.name[0] : "?"}
         </div>
 
         {/* Chat Info */}
         <div>
           <h2 className="text-sm font-semibold text-gray-200">
-            {selectedChat || "No Chat Selected"}
+            {selectedChat?.name || "No Chat Selected"}
           </h2>
           <p className="text-xs text-gray-200">
             {selectedChat ? "Online" : "Select a chat"}

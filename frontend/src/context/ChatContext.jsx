@@ -9,24 +9,24 @@ export function ChatProvider({ children }) {
   const [selectedChat, setSelectedChat] = useState(null);
 
   const [chatList, setChatList] = useState([
-    "Rahul",
-    "Ayesha",
-    "Team Group",
-    "Project Alpha",
-    "Family",
-  ]);
+   {
+     name: "You",
+     email: "you@gmail.com",
+     messages: []
+   },
+   {
+     name: "Bot",
+     email: "bot@gmail.com",
+     messages: []
+   }
+ ]);
+  const [messages, setMessages] = useState({});
   const addMessage = (chatName, message) => {
     setMessages(prev => ({
       ...prev,
       [chatName]: [...(prev[chatName] || []), message]
     }));
   };
-
-  const [messages, setMessages] = useState({
-    Rahul: ["Hi", "How are you?"],
-    Ayesha: ["Hello"],
-    "Team Group": ["Meeting at 5"]
-  });
 
   // 3. Share memory with whole app
   return (
@@ -35,7 +35,7 @@ export function ChatProvider({ children }) {
         selectedChat,
         setSelectedChat,
         chatList,
-        messages,
+        setChatList,
         setMessages,
         addMessage
       }}
