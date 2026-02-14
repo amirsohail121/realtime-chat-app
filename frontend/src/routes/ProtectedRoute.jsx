@@ -1,18 +1,18 @@
 import { createBrowserRouter } from "react-router-dom";
 import Login from "../pages/Login";
-// import Register from "../pages/Register";
 import Chat from "../pages/Chat";
 import ProtectedRoute from "./ProtectedRoute";
+import SetupProfile from "../pages/SetupProfile";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Login />
   },
-  // {
-  //   path: "/register",
-  //   element: <Register />
-  // },
+  {
+    path: "/profile",
+    element: <SetupProfile />
+  },
   {
     path: "/chat",
     element: (
