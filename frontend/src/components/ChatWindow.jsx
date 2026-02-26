@@ -3,24 +3,46 @@ import { ChatContext } from "../context/ChatContext";
 import Topbar from "../components/Topbar";
 import { FiMessageCircle, FiSend } from "react-icons/fi";
 import { useState } from "react";
+import { useEffect } from "react";
+import { socket } from "../socket/socket";
+
 
 const ChatWindow = () => {
   const { selectedChat, messages, addMessage } = useContext(ChatContext);
   const [messageInput, setMessageInput] = useState("");
 
-  const sendMessage = () => {
-    if (!messageInput.trim()) return;
+  // ✅ RECEIVE MESSAGE FROM SOCKET
+  useEffect(() => {
+    socket.on("receive_message", (data) => {
+      const { chat, message } = data;
 
-
-    addMessage(selectedChat, {
-      sender: "user",
-      text: messageInput,
-      time: new Date().toLocaleTimeString()
+      addMessage(chat, message);   // update memory
     });
 
+    return () => socket.off("receive_message");
+  }, [addMessage]);
+
+  const sendMessage = () => {
+    if (!messageInput.trim() || !selectedChat) return;
+
+    const messageData = {
+      chat: selectedChat,
+      message: {
+        sender: "user",
+        text: messageInput,
+        time: new Date().toLocaleTimeString()
+      }
+    };
+
+    // 1️⃣ Send message to socket server
+    socket.emit("send_message", messageData);
+
+    // 2️⃣ Update local UI instantly
+    addMessage(selectedChat, messageData.message);
 
     setMessageInput("");
   };
+
 
 
   if (!selectedChat) {
@@ -38,7 +60,7 @@ const ChatWindow = () => {
     <div className="w-215 flex-1 flex flex-col h-screen bg-gray-50">
       <Topbar />
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {selectedChat?.messages?.map((msg, index) => (
+        {(messages[selectedChat] || []).map((msg, index) => (
           <div
             key={index}
             className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -49,8 +71,8 @@ const ChatWindow = () => {
                 : 'bg-gray-300 text-black'
                 }`}
             >
-              <p>{msg.text || msg}</p>
-              
+              <p>{msg.text}</p>
+
             </div>
           </div>
         ))}

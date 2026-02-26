@@ -37,7 +37,8 @@ export function ChatProvider({ children }) {
         chatList,
         setChatList,
         setMessages,
-        addMessage
+        addMessage,
+        messages
       }}
     >
       {children}
