@@ -1,26 +1,13 @@
-import { createBrowserRouter } from "react-router-dom";
-import Login from "../pages/Login";
-import Chat from "../pages/Chat";
-import ProtectedRoute from "./ProtectedRoute";
-import SetupProfile from "../pages/SetupProfile";
+import { useContext } from "react";
+import { Navigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Login />
-  },
-  {
-    path: "/profile",
-    element: <SetupProfile />
-  },
-  {
-    path: "/chat",
-    element: (
-      // <ProtectedRoute>
-        <Chat />
-      // </ProtectedRoute>
-    )
+export default function ProtectedRoute({ children }) {
+  const { user } = useContext(AuthContext);
+
+  if (!user) {
+    return <Navigate to="/" replace />;
   }
-]);
 
-export default router;
+  return children;
+}
