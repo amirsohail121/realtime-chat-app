@@ -6,10 +6,26 @@ const userSchema = mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      lowercase: true,
+      trim: true,
     },
     name: {
       type: String,
       default: "",
+      trim: true,
+    },
+    profilePic: {
+      type: String,
+      default: "",
+    },
+    bio: {
+      type: String,
+      default: "Hey there! I am using ChatApp.",
+      trim : true
+    },
+    isProfileComplete: {
+      type: Boolean,
+      default: false, // false = new user → redirect to profile page
     },
     status: {
       type: String,
