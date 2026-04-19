@@ -1,23 +1,23 @@
 import { createBrowserRouter } from "react-router-dom";
-// import Login from "../pages/Login";
+import Login from "../pages/Login";
 import Chat from "../pages/Chat";
-// import SetupProfile from "../pages/SetupProfile";
-// import ProtectedRoute from "./ProtectedRoute"; // your filename
+import SetupProfile from "../pages/SetupProfile";
+import ProtectedRoute from "./ProtectedRoute"; // your filename
 import Settings from "../pages/Settings";
 
 const router = createBrowserRouter([
-  // {
-  //   path: "/",
-  //   element: <Login />
-  // },
-  // {
-  //   path: "/profile",
-  //   element: (
-  //     <ProtectedRoute>
-  //       <SetupProfile />
-  //     </ProtectedRoute>
-  //   )
-  // },
+  {
+    path: "/",
+    element: <Login />
+  },
+  {
+    path: "/profile",
+    element: (
+      <ProtectedRoute>
+        <SetupProfile />
+      </ProtectedRoute>
+    )
+  },
   {
     path: "/settings",
     element: (
@@ -27,9 +27,9 @@ const router = createBrowserRouter([
   {
     path: "/chat",
     element: (
-      // <ProtectedRoute>
+      <ProtectedRoute>
       <Chat />
-      // {/* </ProtectedRoute> */}
+    </ProtectedRoute> 
     )
   }
 ]);
