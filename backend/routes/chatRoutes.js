@@ -1,9 +1,10 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const {accessChat} = require('../controllers/chatController');
-const {protect} = require('../middleware/authMiddleware');
+const { accessChat, getChat } = require("../controllers/chatController");
+const { protect } = require("../middleware/authMiddleware");
 
-router.post("/" , protect , accessChat);
+router.post("/", protect, accessChat);
+router.get("/", protect, getChat);
 
-module.exports= router;
+module.exports = router;
