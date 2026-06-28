@@ -7,6 +7,8 @@ const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const { Server } = require("socket.io");
 const socketHandler = require("./socket/socketHandler");
+const uploadRoutes = require("./routes/uploadRoutes");
+
 const cors = require("cors");
 
 const app = express();
@@ -14,7 +16,7 @@ const server = http.createServer(app);
 //Created Socket.io instance with CORS
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: "http://localhost:5173",
     credentials: true,
   },
 });
@@ -51,6 +53,12 @@ app.use("/api/chats", chatRoutes);
 
 //messageRoutes
 app.use("/api/messages", messageRoutes);
+
+//image uplaod
+app.use("/api/upload", uploadRoutes);
+
+// image upload — serve files publicly
+app.use("/uploads", express.static("uploads"));
 
 const PORT = process.env.PORT || 3000;
 
