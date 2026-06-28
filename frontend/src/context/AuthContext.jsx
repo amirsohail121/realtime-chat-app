@@ -1,36 +1,41 @@
 import { createContext, useState, useEffect } from "react";
+import api from "../api/api";
 
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Restore user from localStorage on app start
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-
-    if (savedUser) {
+    const checkAuth = async () => {
       try {
-        setUser(JSON.parse(savedUser));
+        const res = await api.get("/auth/me");
+        setUser(res.data);
       } catch (err) {
-        console.error("Invalid user in localStorage");
-        localStorage.removeItem("user");
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+    checkAuth();
   }, []);
 
   const login = (userData) => {
     setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
     setUser(null);
-    localStorage.removeItem("user");
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

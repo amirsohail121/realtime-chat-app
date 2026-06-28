@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
+import api from "../api/api";
 
 export default function Login() {
 
@@ -15,8 +16,8 @@ export default function Login() {
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState("");
 
-  // ===== SEND OTP (SIMULATED) =====
-  const handleSendOtp = () => {
+  // send otp
+  const handleSendOtp = async () => {
     setError("");
 
     if (!email) {
@@ -24,12 +25,16 @@ export default function Login() {
       return;
     }
 
-    alert("OTP sent to email (demo: 123456)");
-    setOtpSent(true);
+   try{
+    await api.post("/auth/send-otp",{email});
+    setOtpSent(true)
+   }catch(err){
+    setError(err.response?.data?.message || "Failed to send OTP");
+   }
   };
 
-  // ===== VERIFY OTP =====
-  const handleVerifyOtp = () => {
+  // verify otp
+  const handleVerifyOtp =async () => {
     setError("");
 
     if (!otp) {
@@ -37,25 +42,18 @@ export default function Login() {
       return;
     }
 
-    if (otp !== "123456") {
-      setError("Invalid OTP");
-      return;
+    try{
+      const res = await api.post("/auth/verify-otp" , {email,otp});
+      login(res.data);
+      if(res.data.isNewUser){
+        navigate("/profile");
+      }else{
+        navigate("/chat");
+      }
+    }catch(err){
+      setError(err.response?.data?.message || "Invalid OTP");
     }
 
-    login({
-      email: email,
-      name: email.split("@")[0] // demo name
-    });
-    // ===== SIMULATE USER CHECK =====
-    const existingUserEmails = ["rahul@gmail.com", "ali@gmail.com"];
-
-    if (existingUserEmails.includes(email)) {
-      // Existing user → go to chat
-      navigate("/chat");
-    } else {
-      // New user → go to profile setup
-      navigate("/profile", { state: { email } });
-    }
   };
 
   return (

@@ -7,6 +7,7 @@ const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const { Server } = require("socket.io");
 const socketHandler = require("./socket/socketHandler");
+const cors = require("cors");
 
 const app = express();
 const server = http.createServer(app);
@@ -17,6 +18,15 @@ const io = new Server(server, {
     credentials: true,
   },
 });
+
+
+// frontend connectivity
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  }),
+);
 
 socketHandler(io);
 
