@@ -9,10 +9,10 @@
     const {user , login} =  useContext(AuthContext);
     const email = user?.email || "";
 
-    const [name, setName] = useState("");
-    const [bio, setBio] = useState("");
-    const [profilePic, setProfilePic] = useState("");
-    const [preview, setPreview] = useState(null);
+    const [name, setName] = useState(user?.name || "");
+    const [bio, setBio] = useState(user?.bio || "");
+    const [profilePic, setProfilePic] = useState(user?.profilePic || "");
+    const [preview, setPreview] = useState(user?.profilePic || null);
     const [error, setError] = useState("");
   
 

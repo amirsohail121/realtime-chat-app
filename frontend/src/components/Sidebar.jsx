@@ -5,15 +5,15 @@ import { HiUserGroup } from "react-icons/hi2";
 import { useNavigate } from "react-router-dom";
 import { IoMdSettings } from "react-icons/io";
 import { Link } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 const Sidebar = () => {
   const { chatList, setSelectedChat } = useContext(ChatContext);
   const navigate = useNavigate();
 
-  // 🔹 Temporary user data (later from backend/context)
-  const user = {
-    photo: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-  };
+  
+  const { user } = useContext(AuthContext);
+
 
   return (
     <div className="flex flex-row h-screen bg-white">
@@ -34,7 +34,7 @@ const Sidebar = () => {
           </Link>
           <img
             onClick={() => navigate("/profile")}
-            src={user.photo}
+            src={user?.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
             alt="profile"
             className="w-12 h-12 rounded-full object-cover border-2 border-green-500 cursor-pointer hover:border-green-400 transition-colors duration-200"
           />

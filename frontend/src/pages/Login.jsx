@@ -1,15 +1,19 @@
-import { useState } from "react";
+import { useState , useEffect} from "react";
 import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
 
 export default function Login() {
-
-  const { login } = useContext(AuthContext);
-
-
+  const { login, user } = useContext(AuthContext);   // also grab "user" here
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate("/chat", { replace: true });
+    }
+  }, [user]);
+
 
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
