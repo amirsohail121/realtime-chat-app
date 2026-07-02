@@ -11,7 +11,11 @@ const Sidebar = () => {
   const { chatList, setSelectedChat } = useContext(ChatContext);
   const navigate = useNavigate();
 
-  
+  const getChatName = (chat, currentUser) => {
+    if (chat.isGroupChat) return chat.chatName;
+    const otherUser = chat.users.find(u => u._id !== currentUser._id);
+    return otherUser?.name || "Unknown";
+  };
   const { user } = useContext(AuthContext);
 
 
@@ -52,7 +56,7 @@ const Sidebar = () => {
         {/* SEARCH */}
         <input
           type="text"
-          className="m-4 p-3 mx-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition"
+          className="m-4 p-3 mx-4 text-black border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition"
           placeholder="Search chats..."
         />
 
@@ -65,7 +69,7 @@ const Sidebar = () => {
                 onClick={() => setSelectedChat(chat)}
                 className="mx-2 p-4 rounded-lg cursor-pointer hover:bg-linear-to-r hover:from-purple-50 hover:to-purple-100 transition-all duration-200 border-l-4 border-transparent hover:border-green-500"
               >
-                <p className="font-medium text-gray-800">{chat?.name}</p>
+                <p className="font-medium text-gray-800">{getChatName(chat,user)}</p>
               </div>
             ))
           ) : (
