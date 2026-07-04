@@ -1,28 +1,56 @@
-const socketHandler = (io)=>{
-  io.on("connection",(socket)=>{
+const User = require('../models/User')
+
+const socketHandler = (io) => {
+  const onlineUsers = new Map();
+
+  io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
+
+    // User comes online
+    socket.on("user_online", (userId) => {
+      onlineUsers.set(userId, socket.id);
+      io.emit("online_users", Array.from(onlineUsers.keys()));
+      console.log("Online users:", Array.from(onlineUsers.keys()));
+    });
+
     // join chat
-    socket.on("join_chat",(chatId)=>{
+    socket.on("join_chat", (chatId) => {
       socket.join(chatId);
       console.log(`User ${socket.id} joined chat: ${chatId}`);
-    })
+    });
 
-    //sendmessage
-    socket.on("send_message" , (messageData)=>{
-      // console.log("Received messageData:", messageData);
-      // console.log("Type of messageData:", typeof messageData);
-      const data = typeof messageData === "string" ? JSON.parse(messageData) : messageData;
-
+    // send message
+    socket.on("send_message", (messageData) => {
+      const data =
+        typeof messageData === "string" ? JSON.parse(messageData) : messageData;
       console.log("Parsed data:", data);
-      io.to(messageData.chatId).emit("receive_message",messageData);
+      io.to(data.chatId).emit("receive_message", data);
+    });
 
-    })
+    // disconnect
+  socket.on("disconnect", async () => {
+    onlineUsers.forEach(async (socketId, userId) => {
+      if (socketId === socket.id) {
+        onlineUsers.delete(userId);
 
-    //disconnect
-    socket.on("disconnect", () => {
-  console.log("User disconnected:", socket.id);
-});
-  })
-}
+        // Update lastSeen in DB
+        const updatedUser = await User.findByIdAndUpdate(
+          userId,
+          { lastSeen: new Date(), status: "offline" },
+          { new: true }, // ← returns updated document
+        ).catch((err) => console.error("Failed to update lastSeen:", err));
+
+        // Broadcast lastSeen update to all clients
+        io.emit("user_last_seen", {
+          userId,
+          lastSeen: updatedUser?.lastSeen,
+        });
+      }
+    });
+    io.emit("online_users", Array.from(onlineUsers.keys()));
+    console.log("User disconnected:", socket.id);
+  });
+  });
+};
 
 module.exports = socketHandler;
