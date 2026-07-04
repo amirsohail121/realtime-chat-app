@@ -1,86 +1,113 @@
-  import { createContext, useState, useEffect, useContext } from "react";
-  import api from "../api/api";
-  import { AuthContext } from "./AuthContext";
-  import { socket } from "../socket/socket";
+import { createContext, useState, useEffect, useContext } from "react";
+import api from "../api/api";
+import { AuthContext } from "./AuthContext";
+import { socket } from "../socket/socket";
 
-  // 1. Create the memory box
-  export const ChatContext = createContext();
+export const ChatContext = createContext();
 
+export function ChatProvider({ children }) {
+  const { user } = useContext(AuthContext);
 
-  // 2. Create the memory holder
-  export function ChatProvider({ children }) {
+  const [chatList, setChatList] = useState([]);
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState([]);
 
-    const { user } = useContext(AuthContext);
-    // MEMORY PARTS
-    
-    const [chatList, setChatList] = useState([]);
-    const [selectedChat, setSelectedChat] = useState(null)
-    const [messages, setMessages] = useState([]);
-    
-      useEffect(() => {
-        if (!user) return;
+  // Fetch chats when user logs in
+  useEffect(() => {
+    if (!user) return;
+    const fetchChats = async () => {
+      try {
+        const res = await api.get("/chats");
+        setChatList(res.data);
+      } catch (err) {
+        console.error("Failed to fetch chats", err);
+      }
+    };
+    fetchChats();
+  }, [user]);
 
-        const fetchChats = async () => {
-          try {
-            const res = await api.get("/chats");
-            setChatList(res.data);
-          } catch (err) {
-            console.error("Failed to fetch chats", err)
-          }
-        }
-        fetchChats();
-      }, [user])
+  // Socket connection + online status + lastSeen
+  // Socket connection + online status + lastSeen
+  useEffect(() => {
+    if (!user) return;
 
-      useEffect(() => {
-        if (!user) return;
-        socket.connect();
-        return () => {
-          socket.disconnect();
-        }
-      }, [user]);
+    socket.connect();
 
-      //Fetch messages when selectedChat changes
+    // ✅ Wait for connection before emitting user_online
+    socket.on("connect", () => {
+      socket.emit("user_online", user._id);
+    });
 
-      useEffect(() => {
-        if (!selectedChat) return;
-        const fetchMessages = async () => {
-          try {
-            const res = await api.get(`/messages/${selectedChat._id}`);
-            setMessages(res.data);
-          } catch (err) {
-            console.error("Failed to fetch message", err);
-          }
-        }
-        fetchMessages();
-        socket.emit("join_chat", selectedChat._id);
-      }, [selectedChat])
-    
+    socket.on("online_users", (users) => {
+      setOnlineUsers(users);
+    });
 
+    socket.on("user_last_seen", ({ userId, lastSeen }) => {
+      setChatList(prev => prev.map(chat => ({
+        ...chat,
+        users: chat.users.map(u =>
+          u._id === userId ? { ...u, lastSeen } : u
+        )
+      })));
 
-    // Listen for incoming real-time messages
-    useEffect(() => {
-      socket.on("receive_message", (newMessage) => {
-        setMessages((prev) => [...prev, newMessage]);
-      });
-        return () => {
-          socket.off("receive_message");
+      setSelectedChat(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          users: prev.users.map(u =>
+            u._id === userId ? { ...u, lastSeen } : u
+          )
         };
-      }, []);
+      });
+    });
 
+    return () => {
+      socket.off("connect");        // ← add this cleanup
+      socket.off("online_users");
+      socket.off("user_last_seen");
+      socket.disconnect();
+    };
+  }, [user]);
 
-    // 3. Share memory with whole app
-    return (
-      <ChatContext.Provider
-        value={{
-          chatList,
-          setChatList,
-          selectedChat,
-          setSelectedChat,
-          messages,
-          setMessages,
-        }}
-      >
-        {children}
-      </ChatContext.Provider>
-    );
-  }
+  // Fetch messages when selectedChat changes
+  useEffect(() => {
+    if (!selectedChat) return;
+    const fetchMessages = async () => {
+      try {
+        const res = await api.get(`/messages/${selectedChat._id}`);
+        setMessages(res.data);
+      } catch (err) {
+        console.error("Failed to fetch messages", err);
+      }
+    };
+    fetchMessages();
+    socket.emit("join_chat", selectedChat._id);
+  }, [selectedChat]);
+
+  // Listen for real-time messages
+  useEffect(() => {
+    socket.on("receive_message", (newMessage) => {
+      setMessages((prev) => [...prev, newMessage]);
+    });
+    return () => {
+      socket.off("receive_message");
+    };
+  }, []);
+
+  return (
+    <ChatContext.Provider
+      value={{
+        chatList,
+        setChatList,
+        selectedChat,
+        setSelectedChat,
+        messages,
+        setMessages,
+        onlineUsers,
+      }}
+    >
+      {children}
+    </ChatContext.Provider>
+  );
+}
