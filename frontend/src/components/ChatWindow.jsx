@@ -1,49 +1,39 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { ChatContext } from "../context/ChatContext";
+import { AuthContext } from "../context/AuthContext";
 import Topbar from "../components/Topbar";
 import { FiMessageCircle, FiSend } from "react-icons/fi";
-import { useState } from "react";
-import { useEffect } from "react";
 import { socket } from "../socket/socket";
-
+import api from "../api/api";
 
 const ChatWindow = () => {
-  const { selectedChat, messages, addMessage } = useContext(ChatContext);
+  const { selectedChat, messages, setMessages } = useContext(ChatContext);
+  const { user } = useContext(AuthContext);
   const [messageInput, setMessageInput] = useState("");
 
-  // ✅ RECEIVE MESSAGE FROM SOCKET
-  useEffect(() => {
-    socket.on("receive_message", (data) => {
-      const { chat, message } = data;
+  // ❌ NO socket.on here — ChatContext handles receive_message!
 
-      addMessage(chat, message);   // update memory
-    });
-
-    return () => socket.off("receive_message");
-  }, [addMessage]);
-
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!messageInput.trim() || !selectedChat) return;
 
-    const messageData = {
-      chat: selectedChat,
-      message: {
-        sender: "user",
-        text: messageInput,
-        time: new Date().toLocaleTimeString()
-      }
-    };
+    try {
+      const res = await api.post("/messages", {
+        chatId: selectedChat._id,
+        content: messageInput,
+      });
 
-    // 1️⃣ Send message to socket server
-    socket.emit("send_message", messageData);
+      socket.emit("send_message", {
+        chatId: selectedChat._id,
+        ...res.data,
+      });
 
-    // 2️⃣ Update local UI instantly
-    addMessage(selectedChat, messageData.message);
+     
+      setMessageInput("");
 
-    setMessageInput("");
+    } catch (err) {
+      console.error("Failed to send message", err);
+    }
   };
-
-
 
   if (!selectedChat) {
     return (
@@ -60,19 +50,18 @@ const ChatWindow = () => {
     <div className="w-215 flex-1 flex flex-col h-screen bg-gray-50">
       <Topbar />
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {(messages[selectedChat] || []).map((msg, index) => (
+        {messages.map((msg, index) => (
           <div
             key={index}
-            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${msg.sender._id === user?._id ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-xs px-4 py-2 rounded-lg ${msg.sender === 'user'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-300 text-black'
+              className={`max-w-xs px-4 py-2 rounded-lg ${msg.sender._id === user?._id
+                ? "bg-blue-500 text-white"
+                : "bg-gray-300 text-black"
                 }`}
             >
-              <p>{msg.text}</p>
-
+              <p>{msg.content}</p>
             </div>
           </div>
         ))}
@@ -86,9 +75,11 @@ const ChatWindow = () => {
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Type a message..."
             className="flex-1 text-black px-4 py-2 border rounded-lg"
-
           />
-          <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600" onClick={sendMessage}>
+          <button
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+            onClick={sendMessage}
+          >
             <FiSend size={20} />
           </button>
         </div>

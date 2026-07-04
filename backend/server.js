@@ -8,6 +8,7 @@ const messageRoutes = require("./routes/messageRoutes");
 const { Server } = require("socket.io");
 const socketHandler = require("./socket/socketHandler");
 const uploadRoutes = require("./routes/uploadRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const cors = require("cors");
 
@@ -20,7 +21,6 @@ const io = new Server(server, {
     credentials: true,
   },
 });
-
 
 // frontend connectivity
 app.use(
@@ -59,6 +59,9 @@ app.use("/api/upload", uploadRoutes);
 
 // image upload — serve files publicly
 app.use("/uploads", express.static("uploads"));
+
+// searchUsers
+app.use("/api/users", userRoutes);
 
 const PORT = process.env.PORT || 3000;
 

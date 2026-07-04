@@ -24,14 +24,19 @@ const accessChat = async (req, res) => {
     });
 
     // chat exist
+    // When returning existing chat:
     if (chat) {
+      chat = await chat.populate("users", "-password");
       return res.status(200).json(chat);
     }
 
-    const newChat = await Chat.create({
+    // When creating new chat:
+    let newChat = await Chat.create({
       isGroupChat: false,
       users: [req.user._id, userId],
     });
+
+    newChat = await newChat.populate("users", "-password");
     res.status(201).json(newChat);
   } catch (error) {
     return res.status(500).json({ message: error.message });

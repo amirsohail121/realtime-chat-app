@@ -1,4 +1,4 @@
-import { useState , useEffect} from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
@@ -10,7 +10,11 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      navigate("/chat", { replace: true });
+      if (user.isProfileComplete) {
+        navigate("/chat", { replace: true });
+      } else {
+        navigate("/profile", { replace: true });
+      }
     }
   }, [user]);
 
@@ -29,16 +33,16 @@ export default function Login() {
       return;
     }
 
-   try{
-    await api.post("/auth/send-otp",{email});
-    setOtpSent(true)
-   }catch(err){
-    setError(err.response?.data?.message || "Failed to send OTP");
-   }
+    try {
+      await api.post("/auth/send-otp", { email });
+      setOtpSent(true)
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to send OTP");
+    }
   };
 
   // verify otp
-  const handleVerifyOtp =async () => {
+  const handleVerifyOtp = async () => {
     setError("");
 
     if (!otp) {
@@ -46,15 +50,17 @@ export default function Login() {
       return;
     }
 
-    try{
-      const res = await api.post("/auth/verify-otp" , {email,otp});
+    try {
+      const res = await api.post("/auth/verify-otp", { email, otp });
+      // console.log("verify-otp response:", res.data);
+      // console.log("isNewUser:", res.data.isNewUser);
       login(res.data);
-      if(res.data.isNewUser){
+      if (res.data.isNewUser) {
         navigate("/profile");
-      }else{
+      } else {
         navigate("/chat");
       }
-    }catch(err){
+    } catch (err) {
       setError(err.response?.data?.message || "Invalid OTP");
     }
 
