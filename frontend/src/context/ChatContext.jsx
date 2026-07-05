@@ -27,12 +27,16 @@ export function ChatProvider({ children }) {
     fetchChats();
   }, [user]);
 
-  // Socket connection + online status + lastSeen
+
   // Socket connection + online status + lastSeen
   useEffect(() => {
     if (!user) return;
 
     socket.connect();
+    // ✅ Emit user_online AFTER socket is confirmed connected
+    socket.on("connect", () => {
+      socket.emit("user_online", user._id);
+    });
 
     // ✅ Wait for connection before emitting user_online
     socket.on("connect", () => {
