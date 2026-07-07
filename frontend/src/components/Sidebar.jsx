@@ -19,6 +19,50 @@ const Sidebar = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
 
+  //groupChat
+  const [groupOpen, setGroupOpen] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [groupMembers, setGroupMembers] = useState([]);
+  const [groupSearch, setGroupSearch] = useState("");
+  const [groupSearchResults, setGroupSearchResults] = useState([]);
+
+  //groupchat function
+  const handleCreateGroup = async () => {
+    if (!groupName.trim()) return;
+    if (groupMembers.length < 2) {
+      alert("Add at least 2 members!");
+      return;
+    }
+
+    try {
+      const res = await api.post("/chats/group", {
+        name: groupName,
+        users: groupMembers.map(m => m._id),
+      });
+      setChatList(prev => [res.data, ...prev]);
+      setSelectedChat(res.data);
+      setGroupOpen(false);
+      setGroupName("");
+      setGroupMembers([]);
+    } catch (err) {
+      console.error("Failed to create group", err);
+    }
+  };
+
+  // groupchatSearch
+  const handleGroupSearch = async (query) => {
+    setGroupSearch(query);
+    if (!query.trim()) {
+      setGroupSearchResults([]);
+      return;
+    }
+    try {
+      const res = await api.get(`/users/search?query=${query}`);
+      setGroupSearchResults(res.data);
+    } catch (err) {
+      console.error("Search failed", err);
+    }
+  };
 
   const getChatName = (chat, currentUser) => {
     if (chat.isGroupChat) return chat.chatName;
@@ -69,7 +113,10 @@ const Sidebar = () => {
         {/* TOP ICONS */}
         <div className="flex flex-col gap-8">
           <BsFillChatTextFill className="text-green-500 text-3xl cursor-pointer hover:text-green-400 transition-colors duration-200" />
-          <HiUserGroup className="text-green-500 text-3xl cursor-pointer hover:text-green-400 transition-colors duration-200" />
+          <HiUserGroup
+            onClick={() => setGroupOpen(!groupOpen)}
+            className="text-green-500 text-3xl cursor-pointer hover:text-green-400 transition-colors duration-200"
+          />
         </div>
 
         {/* PROFILE + SETTINGS */}
@@ -92,6 +139,95 @@ const Sidebar = () => {
             title="Logout"
           />
         </div>
+        {/* GROUP CHAT MODAL */}
+        {groupOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Create Group Chat</h2>
+
+              {/* Group Name */}
+              <input
+                type="text"
+                placeholder="Group name..."
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                className="w-full text-black p-2 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+
+              {/* Search Users */}
+              <input
+                type="text"
+                placeholder="Search users to add..."
+                value={groupSearch}
+                onChange={(e) => handleGroupSearch(e.target.value)}
+                className="w-full text-black p-2 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+
+              {/* Search Results */}
+              <div className="max-h-32 overflow-y-auto mb-3">
+                {groupSearchResults.map((u) => (
+                  <div
+                    key={u._id}
+                    onClick={() => {
+                      if (!groupMembers.find(m => m._id === u._id)) {
+                        setGroupMembers(prev => [...prev, u]);
+                      }
+                    }}
+                    className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+                  >
+                    <img
+                      src={u.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <p className="text-sm text-gray-800">{u.name}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Selected Members */}
+              {groupMembers.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {groupMembers.map((m) => (
+                    <span
+                      key={m._id}
+                      className="flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-sm"
+                    >
+                      {m.name}
+                      <button
+                        onClick={() => setGroupMembers(prev => prev.filter(x => x._id !== m._id))}
+                        className="text-red-400 hover:text-red-600 font-bold"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCreateGroup}
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-medium"
+                >
+                  Create Group
+                </button>
+                <button
+                  onClick={() => {
+                    setGroupOpen(false);
+                    setGroupName("");
+                    setGroupMembers([]);
+                    setGroupSearch("");
+                    setGroupSearchResults([]);
+                  }}
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ===== CHAT LIST AREA ===== */}
@@ -150,7 +286,6 @@ const Sidebar = () => {
           </div>
         )}
 
-        {/* CHAT LIST */}
         {/* CHAT LIST */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {chatList.length > 0 ? (
