@@ -20,16 +20,15 @@ const Chat = () => {
   return (
 
 
-    <div className="flex flex-row">
-      {/* Sidebar section */}
-      <div className="">
-          <Sidebar />
-        </div>
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar */}
+      <Sidebar />
 
-      <div className="">
-          <ChatWindow />
-        </div>
+      {/* Chat Window — fills remaining space */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <ChatWindow />
       </div>
+    </div>
 
   );
 };
