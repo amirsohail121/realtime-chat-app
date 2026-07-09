@@ -22,6 +22,11 @@ const Topbar = () => {
 
   const getStatus = () => {
     if (!selectedChat) return "Select a chat";
+
+    if (selectedChat.isGroupChat) {
+      return `${selectedChat.users.length} members`;  // ← group shows member count
+    }
+
     if (onlineUsers.includes(otherUser?._id)) return "Online";
     if (otherUser?.lastSeen) {
       return `Last seen ${new Date(otherUser.lastSeen).toLocaleTimeString([], {
