@@ -21,11 +21,23 @@ const getDateLabel = (dateStr) => {
   });
 };
 
+
 const ChatWindow = () => {
   const { selectedChat, messages, setMessages } = useContext(ChatContext);
   const { user } = useContext(AuthContext);
   const [messageInput, setMessageInput] = useState("");
   const messagesEndRef = useRef(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeout = useRef(null);
+
+  useEffect(() => {
+    socket.on("typing", () => setIsTyping(true));
+    socket.on("stop_typing", () => setIsTyping(false));
+    return () => {
+      socket.off("typing");
+      socket.off("stop_typing");
+    };
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -46,6 +58,14 @@ const ChatWindow = () => {
     } catch (err) {
       console.error("Failed to send message", err);
     }
+  };
+  const handleTyping = (e) => {
+    setMessageInput(e.target.value);
+    socket.emit("typing", selectedChat._id);
+    clearTimeout(typingTimeout.current);
+    typingTimeout.current = setTimeout(() => {
+      socket.emit("stop_typing", selectedChat._id);
+    }, 2000);
   };
 
   if (!selectedChat) {
@@ -174,12 +194,26 @@ const ChatWindow = () => {
                         })}
                       </p>
                     )}
+
+
                   </div>
                 </div>
               </div>
             );
           })}
           <div ref={messagesEndRef} />
+          {isTyping && (
+            <div className="flex items-end gap-2 mb-2">
+              <div className="w-7 h-7 rounded-full bg-gray-300 flex-shrink-0" />
+              <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-sm px-4 py-2 shadow-sm">
+                <div className="flex gap-1 items-center h-4">
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -189,7 +223,7 @@ const ChatWindow = () => {
           <input
             type="text"
             value={messageInput}
-            onChange={(e) => setMessageInput(e.target.value)}
+            onChange={handleTyping}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Type a message..."
             className="flex-1 bg-transparent text-black text-sm focus:outline-none placeholder-gray-400"

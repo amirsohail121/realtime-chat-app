@@ -27,29 +27,38 @@ const socketHandler = (io) => {
       io.to(data.chatId).emit("receive_message", data);
     });
 
-    // disconnect
-  socket.on("disconnect", async () => {
-    onlineUsers.forEach(async (socketId, userId) => {
-      if (socketId === socket.id) {
-        onlineUsers.delete(userId);
-
-        // Update lastSeen in DB
-        const updatedUser = await User.findByIdAndUpdate(
-          userId,
-          { lastSeen: new Date(), status: "offline" },
-          { new: true }, // ← returns updated document
-        ).catch((err) => console.error("Failed to update lastSeen:", err));
-
-        // Broadcast lastSeen update to all clients
-        io.emit("user_last_seen", {
-          userId,
-          lastSeen: updatedUser?.lastSeen,
-        });
-      }
+    // Typing indicator
+    socket.on("typing", (chatId) => {
+      socket.to(chatId).emit("typing", { chatId, userId: socket.id });
     });
-    io.emit("online_users", Array.from(onlineUsers.keys()));
-    console.log("User disconnected:", socket.id);
-  });
+
+    socket.on("stop_typing", (chatId) => {
+      socket.to(chatId).emit("stop_typing", { chatId });
+    });
+
+    // disconnect
+    socket.on("disconnect", async () => {
+      onlineUsers.forEach(async (socketId, userId) => {
+        if (socketId === socket.id) {
+          onlineUsers.delete(userId);
+
+          // Update lastSeen in DB
+          const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { lastSeen: new Date(), status: "offline" },
+            { new: true }, // ← returns updated document
+          ).catch((err) => console.error("Failed to update lastSeen:", err));
+
+          // Broadcast lastSeen update to all clients
+          io.emit("user_last_seen", {
+            userId,
+            lastSeen: updatedUser?.lastSeen,
+          });
+        }
+      });
+      io.emit("online_users", Array.from(onlineUsers.keys()));
+      console.log("User disconnected:", socket.id);
+    });
   });
 };
 
