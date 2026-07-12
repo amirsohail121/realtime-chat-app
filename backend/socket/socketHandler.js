@@ -59,6 +59,11 @@ const socketHandler = (io) => {
       io.emit("online_users", Array.from(onlineUsers.keys()));
       console.log("User disconnected:", socket.id);
     });
+
+    // Messages read
+    socket.on("messages_read", (chatId) => {
+      socket.to(chatId).emit("messages_read", chatId);
+    });
   });
 };
 

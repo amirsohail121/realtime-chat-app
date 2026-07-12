@@ -44,8 +44,26 @@ const getMessage = async (req, res) => {
   }
 };
 
-module.exports = { sendMessage, getMessage };
+// markAsRead
+const markAsRead = async (req, res) => {
+  try {
+    const { chatId } = req.params;
 
+    await Message.updateMany(
+      {
+        chat: chatId,
+        readBy: { $ne: req.user._id }, // not already read by this user
+        sender: { $ne: req.user._id }, // not sent by this user
+      },
+      {
+        $addToSet: { readBy: req.user._id }, // add user to readBy array
+      },
+    );
 
+    res.status(200).json({ message: "Messages marked as read" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
-
+module.exports = { sendMessage, getMessage, markAsRead };
