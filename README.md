@@ -297,12 +297,12 @@ erDiagram
 ## 👨‍💻 Author
 
 **Amir Sohail**
-- B.Tech CSE — 6th Semester
+- B.Tech CSE — 7th Semester
 - Full Stack Developer (MERN)
-- GitHub: [@amirsohail](https://github.com/amirsohail)
+- GitHub: [@amirsohail121](https://github.com/amirsohail121)
 
 ---
 
 ## 📄 License
 
-This project is for educational and portfolio purposes.
+This project is for Personal(educational) and portfolio purposes.
