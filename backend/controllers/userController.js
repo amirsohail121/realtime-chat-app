@@ -8,12 +8,12 @@ const searchUsers = async(req,res)=>{
   }
   try{
     const users = await User.find({
-      $or:[
+      $or: [
         { name: { $regex: query, $options: "i" } },
         { email: { $regex: query, $options: "i" } },
       ],
-      _id:{$ne:req.user._id},
-    }).select("_id name email profilePic bio ");
+      _id: { $ne: req.user._id },
+    }).select("_id name email profilePic bio publicKey");
     res.status(200).json(users);
   }catch(err){
     return res.status(500).json({message:err.message})

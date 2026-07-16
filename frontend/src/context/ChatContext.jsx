@@ -27,18 +27,13 @@ export function ChatProvider({ children }) {
     fetchChats();
   }, [user]);
 
-
   // Socket connection + online status + lastSeen
   useEffect(() => {
     if (!user) return;
 
     socket.connect();
-    // ✅ Emit user_online AFTER socket is confirmed connected
-    socket.on("connect", () => {
-      socket.emit("user_online", user._id);
-    });
 
-    // ✅ Wait for connection before emitting user_online
+    // Emit user_online AFTER socket is confirmed connected
     socket.on("connect", () => {
       socket.emit("user_online", user._id);
     });
@@ -66,10 +61,20 @@ export function ChatProvider({ children }) {
       });
     });
 
+    // Listen for messages_read event
+    socket.on("messages_read", (chatId) => {
+      setMessages(prev => prev.map(msg =>
+        msg.chat === chatId && !msg.readBy.includes(user._id)
+          ? { ...msg, readBy: [...msg.readBy, user._id] }
+          : msg
+      ));
+    });
+
     return () => {
-      socket.off("connect");        // ← add this cleanup
+      socket.off("connect");
       socket.off("online_users");
       socket.off("user_last_seen");
+      socket.off("messages_read");
       socket.disconnect();
     };
   }, [user]);
@@ -77,23 +82,41 @@ export function ChatProvider({ children }) {
   // Fetch messages when selectedChat changes
   useEffect(() => {
     if (!selectedChat) return;
+
     const fetchMessages = async () => {
       try {
         const res = await api.get(`/messages/${selectedChat._id}`);
         setMessages(res.data);
+
+        // Mark messages as read
+        await api.put(`/messages/read/${selectedChat._id}`);
+
+        // Notify sender via socket
+        socket.emit("messages_read", selectedChat._id);
       } catch (err) {
         console.error("Failed to fetch messages", err);
       }
     };
+
     fetchMessages();
     socket.emit("join_chat", selectedChat._id);
   }, [selectedChat]);
 
   // Listen for real-time messages
+  // Listen for real-time messages
   useEffect(() => {
     socket.on("receive_message", (newMessage) => {
+      // Update messages array
       setMessages((prev) => [...prev, newMessage]);
+
+      // Update latestMessage in chatList ← ADD THIS
+      setChatList(prev => prev.map(chat =>
+        chat._id === newMessage.chat
+          ? { ...chat, latestMessage: newMessage }
+          : chat
+      ));
     });
+
     return () => {
       socket.off("receive_message");
     };

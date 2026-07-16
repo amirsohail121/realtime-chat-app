@@ -6,7 +6,7 @@ export const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
+  console.log("Full user object:", user);
   useEffect(() => {
     const checkAuth = async () => {
       try {

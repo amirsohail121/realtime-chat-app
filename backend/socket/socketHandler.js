@@ -4,26 +4,24 @@ const socketHandler = (io) => {
   const onlineUsers = new Map();
 
   io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+   
 
     // User comes online
     socket.on("user_online", (userId) => {
       onlineUsers.set(userId, socket.id);
       io.emit("online_users", Array.from(onlineUsers.keys()));
-      console.log("Online users:", Array.from(onlineUsers.keys()));
+     
     });
 
     // join chat
     socket.on("join_chat", (chatId) => {
       socket.join(chatId);
-      console.log(`User ${socket.id} joined chat: ${chatId}`);
     });
 
     // send message
     socket.on("send_message", (messageData) => {
       const data =
         typeof messageData === "string" ? JSON.parse(messageData) : messageData;
-      console.log("Parsed data:", data);
       io.to(data.chatId).emit("receive_message", data);
     });
 
@@ -46,7 +44,7 @@ const socketHandler = (io) => {
           const updatedUser = await User.findByIdAndUpdate(
             userId,
             { lastSeen: new Date(), status: "offline" },
-            { new: true }, // ← returns updated document
+            { returnDocument: 'after' }, // ← returns updated document
           ).catch((err) => console.error("Failed to update lastSeen:", err));
 
           // Broadcast lastSeen update to all clients
@@ -57,7 +55,7 @@ const socketHandler = (io) => {
         }
       });
       io.emit("online_users", Array.from(onlineUsers.keys()));
-      console.log("User disconnected:", socket.id);
+     
     });
 
     // Messages read

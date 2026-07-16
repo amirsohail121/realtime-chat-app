@@ -7,10 +7,16 @@ import { IoMdSettings } from "react-icons/io";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
-import { IoLogOutOutline } from "react-icons/io5";
+import { decryptPreview } from "../utils/crypto";
+import {
+  IoLogOutOutline,
+  IoCloseOutline,
+  IoPersonCircleOutline,
+  IoSearchOutline,
+} from "react-icons/io5";
 
 const Sidebar = () => {
-  const { chatList, setChatList, setSelectedChat } = useContext(ChatContext);
+  const { chatList, setChatList, selectedChat, setSelectedChat } = useContext(ChatContext);
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -104,46 +110,87 @@ const Sidebar = () => {
     }
   };
 
+
+  const Avatar = ({ src, size = 44, isGroup = false }) => {
+    const px = `${size}px`;
+    if (src) {
+      return (
+        <img
+          src={src}
+          alt=""
+          style={{ width: px, height: px }}
+          className="rounded-full object-cover flex-shrink-0"
+        />
+      );
+    }
+    return (
+      <div
+        style={{ width: px, height: px }}
+        className={`rounded-full flex items-center justify-center flex-shrink-0 ${isGroup ? "bg-teal-100 text-teal-500" : "bg-slate-200 text-slate-400"
+          }`}
+      >
+        {isGroup ? (
+          <HiUserGroup size={Math.round(size * 0.42)} />
+        ) : (
+          <IoPersonCircleOutline size={Math.round(size * 1.15)} />
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-row h-screen bg-white">
 
       {/* ===== LEFT SIDEBAR ===== */}
-      <div className="w-20 px-4 py-6 flex flex-col items-center gap-8 bg-gradient-to-b from-gray-900 to-gray-800 border-r border-gray-700">
+      <div className="w-20 px-4 py-6 flex flex-col items-center gap-8 bg-teal-600 border-r border-teal-700">
 
         {/* TOP ICONS */}
-        <div className="flex flex-col gap-8">
-          <BsFillChatTextFill className="text-green-500 text-3xl cursor-pointer hover:text-green-400 transition-colors duration-200" />
+        <div className="flex flex-col gap-4">
+          <BsFillChatTextFill
+            size={20}
+            className="w-11 h-11 p-2.5 rounded-2xl bg-white text-teal-600 shadow-lg shadow-black/20 cursor-pointer"
+          />
           <HiUserGroup
             onClick={() => setGroupOpen(!groupOpen)}
-            className="text-green-500 text-3xl cursor-pointer hover:text-green-400 transition-colors duration-200"
+            size={20}
+            className="w-11 h-11 p-2.5 rounded-2xl text-white cursor-pointer hover:text-teal-600 hover:bg-white transition-colors duration-200"
           />
         </div>
 
         {/* PROFILE + SETTINGS */}
-        <div className="mt-auto flex flex-col items-center gap-6">
+
+        <div className="mt-auto flex flex-col items-center gap-4">
           <img
             onClick={() => navigate("/profile")}
             src={user?.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
             alt="profile"
-            className="w-12 h-12 rounded-full object-cover border-2 border-green-500 cursor-pointer hover:border-green-400 transition-colors duration-200"
+            className="w-11 h-11 rounded-full object-cover ring-2 ring-offset-2 ring-offset-teal-600 ring-teal-400 cursor-pointer hover:ring-white hover:shadow-lg hover:shadow-white/20 transition-all duration-200"
           />
-          <Link to="/settings">
-            <IoMdSettings className="text-3xl text-green-500 cursor-pointer hover:text-green-400 transition-colors duration-200" />
-          </Link>
-
+          {/* <Link
+            to="/settings"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl text-white hover:text-teal-600 hover:bg-white transition-colors duration-200"
+          >
+            <IoMdSettings className="text-white hover:text-teal-600" size={30} />
+          </Link> */}
 
           {/* LOGOUT BUTTON */}
           <IoLogOutOutline
             onClick={logout}
-            className="text-3xl text-red-400 cursor-pointer hover:text-red-300 transition-colors duration-200"
+            size={30}
             title="Logout"
+            className="w-11 h-11 p-2.5 rounded-2xl text-white cursor-pointer hover:text-rose-500 hover:bg-rose-100/20 transition-colors duration-200"
           />
         </div>
         {/* GROUP CHAT MODAL */}
         {groupOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Create Group Chat</h2>
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+              <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2.5">
+                <span className="w-9 h-9 flex items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+                  <HiUserGroup size={18} />
+                </span>
+                Create Group Chat
+              </h2>
 
               {/* Group Name */}
               <input
@@ -151,7 +198,7 @@ const Sidebar = () => {
                 placeholder="Group name..."
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
-                className="w-full text-black p-2 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full text-slate-800 p-2.5 border border-slate-200 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
               />
 
               {/* Search Users */}
@@ -160,7 +207,7 @@ const Sidebar = () => {
                 placeholder="Search users to add..."
                 value={groupSearch}
                 onChange={(e) => handleGroupSearch(e.target.value)}
-                className="w-full text-black p-2 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full text-slate-800 p-2.5 border border-slate-200 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
               />
 
               {/* Search Results */}
@@ -173,13 +220,10 @@ const Sidebar = () => {
                         setGroupMembers(prev => [...prev, u]);
                       }
                     }}
-                    className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+                    className="flex items-center gap-2 p-2 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors"
                   >
-                    <img
-                      src={u.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                    <p className="text-sm text-gray-800">{u.name}</p>
+                    <Avatar src={u.profilePic} size={32} />
+                    <p className="text-sm text-slate-800">{u.name}</p>
                   </div>
                 ))}
               </div>
@@ -190,14 +234,14 @@ const Sidebar = () => {
                   {groupMembers.map((m) => (
                     <span
                       key={m._id}
-                      className="flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-sm"
+                      className="flex items-center gap-1.5 bg-teal-50 text-teal-700 pl-3 pr-2 py-1 rounded-full text-sm"
                     >
                       {m.name}
                       <button
                         onClick={() => setGroupMembers(prev => prev.filter(x => x._id !== m._id))}
-                        className="text-red-400 hover:text-red-600 font-bold"
+                        className="w-4 h-4 flex items-center justify-center rounded-full text-teal-500 hover:bg-teal-100 hover:text-teal-700"
                       >
-                        ×
+                        <IoCloseOutline size={13} />
                       </button>
                     </span>
                   ))}
@@ -208,7 +252,7 @@ const Sidebar = () => {
               <div className="flex gap-2">
                 <button
                   onClick={handleCreateGroup}
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-medium"
+                  className="flex-1 bg-teal-500 hover:bg-teal-600 text-white py-2.5 rounded-xl font-medium transition-colors"
                 >
                   Create Group
                 </button>
@@ -220,7 +264,7 @@ const Sidebar = () => {
                     setGroupSearch("");
                     setGroupSearchResults([]);
                   }}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium"
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl font-medium transition-colors"
                 >
                   Cancel
                 </button>
@@ -231,100 +275,107 @@ const Sidebar = () => {
       </div>
 
       {/* ===== CHAT LIST AREA ===== */}
-      <div className="flex-1 flex flex-col w-106 border-r border-gray-300">
+      <div className="flex-1 flex flex-col w-[26rem] border-r border-slate-200">
 
         {/* HEADER */}
-        <div className="bg-linear-to-r from-[#372aac] to-[#4c3fb3] text-white shadow-md flex items-center justify-between px-6">
-          <h2 className="text-3xl py-3.5 font-bold">Chats</h2>
-          <button
-            onClick={() => setSearchOpen(!searchOpen)}
-            className="text-white text-2xl hover:text-green-300 transition"
-            title="New Chat"
-          >
-            ✏️
-          </button>
-        </div>
+        <div className="bg-white border-b border-slate-200 px-6 py-4">
+          <h2 className="text-2xl font-semibold text-slate-900 mb-4">
+            Chats
+          </h2>
 
-        {/* SEARCH PANEL */}
-        {searchOpen && (
-          <div className="p-3 border-b border-gray-200">
+          {/* SEARCH PANEL (always visible) */}
+          <div className="relative">
+            <IoSearchOutline className="relative left-3 top-10 transform -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search by name or email..."
-              className="w-full text-black p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Search Users..."
+              className="w-full text-slate-800 pl-10 pr-3 py-2 border border-slate-200 rounded-4xl bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-colors"
               autoFocus
             />
 
             {/* SEARCH RESULTS */}
             <div className="mt-2 max-h-60 overflow-y-auto">
               {searching && (
-                <p className="text-center text-gray-400 text-sm py-2">Searching...</p>
+                <p className="text-center text-slate-400 text-sm py-2">Searching...</p>
               )}
               {!searching && searchResults.length === 0 && searchQuery && (
-                <p className="text-center text-gray-400 text-sm py-2">No users found</p>
+                <p className="text-center text-slate-400 text-sm py-2">No users found</p>
               )}
               {searchResults.map((u) => (
                 <div
                   key={u._id}
                   onClick={() => handleStartChat(u._id)}
-                  className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+                  className="flex items-center gap-3 p-2 hover:bg-white rounded-xl cursor-pointer transition-colors"
                 >
-                  <img
-                    src={u.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                    alt={u.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
+                  <Avatar src={u.profilePic} size={40} />
                   <div>
-                    <p className="font-medium text-gray-800 text-sm">{u.name}</p>
-                    <p className="text-gray-500 text-xs">{u.bio}</p>
+                    <p className="font-medium text-slate-800 text-sm">{u.name}</p>
+                    <p className="text-slate-400 text-xs">{u.bio}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        )}
+          )
 
-        {/* CHAT LIST */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
-          {chatList.length > 0 ? (
-            chatList.map((chat, index) => {
-              const otherUser = chat.isGroupChat
-                ? null
-                : chat.users.find(u => u._id !== user?._id);
+          {/* CHAT LIST */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 space-y-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {chatList.length > 0 ? (
+              chatList.map((chat, index) => {
+                const otherUser = chat.isGroupChat
+                  ? null
+                  : chat.users.find(u => u._id !== user?._id);
+                const isActive = selectedChat?._id === chat._id;
 
-              return (
-                <div
-                  key={index}
-                  onClick={() => setSelectedChat(chat)}
-                  className="mx-2 p-3 rounded-lg cursor-pointer hover:bg-purple-50 transition-all duration-200 border-l-4 border-transparent hover:border-green-500 flex items-center gap-3"
-                >
-                  {/* AVATAR */}
-                  <img
-                    src={otherUser?.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                    alt={otherUser?.name}
-                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                  />
+                return (
+                  <div
+                    key={index}
+                    onClick={() => setSelectedChat(chat)}
+                    className={`p-3 rounded-xl cursor-pointer transition-all duration-200 border-l-2 flex items-center gap-3 ${isActive
+                      ? "bg-teal-500 border-teal-500 shadow-md shadow-teal-500/25"
+                      : "border-transparent hover:bg-slate-50 hover:border-teal-500 hover:shadow-sm hover:-translate-y-0.5"
+                      }`}
+                  >
+                    {/* AVATAR */}
+                    <div className={isActive ? "rounded-full ring-2 ring-white/60" : ""}>
+                      <Avatar
+                        src={chat.isGroupChat ? chat.groupPic : otherUser?.profilePic}
+                        size={44}
+                        isGroup={chat.isGroupChat}
+                      />
+                    </div>
 
-                  {/* NAME + LAST MESSAGE */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-800">{getChatName(chat, user)}</p>
-                    <p className="text-xs text-gray-400 truncate">
-                      {chat.latestMessage?.content || "No messages yet"}
-                    </p>
+                    {/* NAME + LAST MESSAGE */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-medium ${isActive ? "text-white" : "text-slate-800"}`}>
+                        {getChatName(chat, user)}
+                      </p>
+                      <p className={`text-xs truncate ${isActive ? "text-teal-50" : "text-slate-400"}`}>
+                        {chat.latestMessage
+                          ? decryptPreview(chat.latestMessage, user?._id)
+                          : "No messages yet"
+                        }
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })
-          ) : (
-            <p className="p-4 text-center text-gray-400">No chats yet</p>
-          )}
-        </div>
+                );
+              })
+            ) : (
+              <p className="p-4 text-center text-slate-400">No chats yet</p>
+            )}
+          </div>
 
+        </div>
       </div>
     </div>
   );
 };
 
 export default Sidebar;
+
+
+
+
+

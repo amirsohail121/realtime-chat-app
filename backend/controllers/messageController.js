@@ -5,21 +5,21 @@ const Chat = require("../models/Chat");
 
 const sendMessage = async (req, res) => {
   try {
-    const { chatId, content } = req.body;
+    const { chatId, content, contentForSender } = req.body;
+
     if (!chatId || !content) {
       return res
         .status(400)
         .json({ message: "chatId and content are required" });
     }
 
-    //create message
     let message = await Message.create({
       sender: req.user._id,
       content: content,
+      contentForSender: contentForSender || "",
       chat: chatId,
     });
 
-    //update the latestmessage
     await Chat.findByIdAndUpdate(chatId, { latestMessage: message._id });
     message = await message.populate("sender", "-password");
 

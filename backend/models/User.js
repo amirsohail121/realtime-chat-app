@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 
 const userSchema = mongoose.Schema(
   {
+    publicKey: {
+      type: String,
+      default: "",
+    },
     email: {
       type: String,
       required: true,
@@ -21,7 +25,7 @@ const userSchema = mongoose.Schema(
     bio: {
       type: String,
       default: "Hey there! I am using ChatApp.",
-      trim : true
+      trim: true,
     },
     isProfileComplete: {
       type: Boolean,

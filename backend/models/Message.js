@@ -12,6 +12,12 @@ const messageSchema = new mongoose.Schema(
       trim: true,
       required: true,
     },
+    contentForSender: {
+      // ← ADD THIS
+      type: String,
+      trim: true,
+      default: "",
+    },
     chat: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Chat",

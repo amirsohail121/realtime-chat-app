@@ -121,7 +121,7 @@ const verifyOtp = async (req,res)=>{
 
 const completeProfile = async(req,res)=>{
   try{
-    const {name , bio , profilePic} = req.body;
+    const {name , bio , profilePic,publicKey} = req.body;
     const user = await User.findById(req.user._id);
     
     if(!user){
@@ -131,6 +131,7 @@ const completeProfile = async(req,res)=>{
     user.name = name || user.name;
     user.bio = bio || user.bio;
     user.profilePic = profilePic || user.profilePic;
+     user.publicKey = publicKey || user.publicKey;
 
     user.isProfileComplete = true;
 
@@ -143,6 +144,7 @@ const completeProfile = async(req,res)=>{
       profilePic: user.profilePic,
       bio: user.bio,
       isProfileComplete: user.isProfileComplete,
+      publicKey: user.publicKey,
     });
 
 

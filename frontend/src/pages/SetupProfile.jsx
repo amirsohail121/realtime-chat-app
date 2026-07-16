@@ -2,6 +2,7 @@
   import { useNavigate } from "react-router-dom";
   import {AuthContext} from "../context/AuthContext";
   import api from "../api/api";
+import { generateKeyPair, savePrivateKey } from "../utils/crypto";
 
 
   export default function SetupProfile() {
@@ -43,9 +44,26 @@
       }
 
       try {
-        const res = await api.put("/auth/complete-profile", { name, bio, profilePic });
+        // Generate key pair for NEW users only
+        let publicKey = user?.publicKey || "";
+
+        if (!user?.publicKey) {
+          // First time setup → generate keys
+          const { publicKey: pubKey, privateKey } = generateKeyPair();
+          publicKey = pubKey;
+          savePrivateKey(privateKey);  // save to localStorage
+        }
+
+        const res = await api.put("/auth/complete-profile", {
+          name,
+          bio,
+          profilePic,
+          publicKey,  // ← send to backend
+        });
+
         login(res.data);
         navigate("/chat");
+
       } catch (err) {
         setError(err.response?.data?.message || "Failed to save profile");
       }
