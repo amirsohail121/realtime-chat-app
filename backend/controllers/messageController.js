@@ -5,18 +5,34 @@ const Chat = require("../models/Chat");
 
 const sendMessage = async (req, res) => {
   try {
-    const { chatId, content, contentForSender } = req.body;
+    const {
+      chatId,
+      content,
+      contentForSender,
+      fileUrl,
+      fileType,
+      fileName,
+      encryptedAesKey,
+      encryptedAesKeyForSender,
+      iv,
+    } = req.body;
 
-    if (!chatId || !content) {
+    if (!chatId || (!content && !fileUrl)) {
       return res
         .status(400)
-        .json({ message: "chatId and content are required" });
+        .json({ message: "chatId and content or file are required" });
     }
 
     let message = await Message.create({
       sender: req.user._id,
-      content: content,
+      content: content || "",
       contentForSender: contentForSender || "",
+      fileUrl: fileUrl || "",
+      fileType: fileType || "",
+      fileName: fileName || "",
+      encryptedAesKey: encryptedAesKey || "",
+      encryptedAesKeyForSender: encryptedAesKeyForSender || "",
+      iv: iv || "",
       chat: chatId,
     });
 

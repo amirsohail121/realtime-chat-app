@@ -2,7 +2,7 @@
   import { useNavigate } from "react-router-dom";
   import {AuthContext} from "../context/AuthContext";
   import api from "../api/api";
-import { generateKeyPair, savePrivateKey } from "../utils/crypto";
+import { generateKeyPair, savePrivateKey, getPrivateKey } from "../utils/crypto";
 
 
   export default function SetupProfile() {
@@ -33,8 +33,7 @@ import { generateKeyPair, savePrivateKey } from "../utils/crypto";
       }
     };
 
-
-    // ===== SAVE PROFILE =====
+   //saved
     const handleSave = async () => {
       setError("");
 
@@ -44,21 +43,30 @@ import { generateKeyPair, savePrivateKey } from "../utils/crypto";
       }
 
       try {
-        // Generate key pair for NEW users only
+        // Check if user already has valid key pair
+        const hasExistingKey =
+          user?.publicKey &&
+          user.publicKey.length > 0 &&
+          getPrivateKey(user._id) !== null;
+
         let publicKey = user?.publicKey || "";
 
-        if (!user?.publicKey) {
-          // First time setup → generate keys
+        if (!hasExistingKey) {
+          console.log("Generating new key pair...");
           const { publicKey: pubKey, privateKey } = generateKeyPair();
           publicKey = pubKey;
-          savePrivateKey(privateKey);  // save to localStorage
+          savePrivateKey(privateKey, user._id);
+          console.log("Key pair generated ✅");
+        } else {
+          console.log("Keeping existing key pair ✅");
+          publicKey = user.publicKey;
         }
 
         const res = await api.put("/auth/complete-profile", {
           name,
           bio,
           profilePic,
-          publicKey,  // ← send to backend
+          publicKey,
         });
 
         login(res.data);

@@ -1,12 +1,67 @@
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { ChatContext } from "../context/ChatContext";
 import { BsCheck2, BsCheck2All } from "react-icons/bs";
 import { IoPersonCircleOutline } from "react-icons/io5";
+import { decryptFile, decryptAesKey, getPrivateKey } from "../utils/crypto";
+import MediaViewer from "./MediaViewer";
 
 const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) => {
   const { user } = useContext(AuthContext);
   const { selectedChat } = useContext(ChatContext);
+
+  const [decryptedFileUrl, setDecryptedFileUrl] = useState(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  useEffect(() => {
+    if (!msg.fileUrl) return;
+
+    const decryptFileContent = async () => {
+      const privateKey = getPrivateKey(user?._id);
+      if (!privateKey) return;
+
+      const isSender = msg.sender._id === user?._id;
+
+      // Get correct encrypted AES key
+      const encryptedAesKey = isSender
+        ? msg.encryptedAesKeyForSender
+        : msg.encryptedAesKey;
+
+      if (!encryptedAesKey) return;
+
+      // Decrypt AES key
+      const aesKey = decryptAesKey(encryptedAesKey, privateKey);
+      if (!aesKey) return;
+
+      
+      // Fetch encrypted file
+      const response = await fetch(msg.fileUrl);
+      const encryptedBuffer = await response.arrayBuffer();
+
+      // ✅ Convert chunk by chunk to avoid stack overflow
+      const uint8Array = new Uint8Array(encryptedBuffer);
+      let binaryString = "";
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, i + chunkSize);
+        binaryString += String.fromCharCode.apply(null, chunk);
+      }
+      const encryptedBase64 = btoa(binaryString);
+
+      // Decrypt file
+      const mimeType = msg.fileType === "image"
+        ? "image/jpeg"
+        : msg.fileType === "video"
+          ? "video/mp4"
+          : "application/octet-stream";
+
+      const url = decryptFile(encryptedBase64, aesKey, msg.iv, mimeType);
+      setDecryptedFileUrl(url);
+    };
+
+    decryptFileContent();
+  }, [msg]);
+
 
   const isSender = msg.sender._id === user?._id;
 
@@ -53,8 +108,75 @@ const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) =
           ? "bg-teal-500 text-white rounded-2xl rounded-br-sm"
           : "bg-white text-slate-800 border border-slate-100 rounded-2xl rounded-bl-sm"
           }`}>
-          <p className="text-sm leading-relaxed">{decryptContent(msg)}</p>
+          {/* Only show text if there's content */}
+          {msg.content && (
+            <p className="text-sm leading-relaxed">{decryptContent(msg)}</p>
+          )}
+          
+          {/* FILE DISPLAY */}
+          {msg.fileUrl && (
+            <div className="mt-1">
+              {msg.fileType === "image" && (
+                decryptedFileUrl ? (
+                  <img
+                    src={decryptedFileUrl}
+                    alt="encrypted image"
+                    className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition"
+                    onClick={() => setViewerOpen(true)}  // ← open viewer instead of browser
+                  />
+                ) : (
+                  <div className="w-48 h-32 bg-gray-200 rounded-lg flex items-center justify-center">
+                    <p className="text-xs text-gray-500">Decrypting image...</p>
+                  </div>
+                )
+              )}
+
+              {msg.fileType === "video" && (
+                decryptedFileUrl ? (
+                  <div
+                    className="relative w-48 h-32 bg-black rounded-lg cursor-pointer overflow-hidden"
+                    onClick={() => setViewerOpen(true)}  // ← open viewer
+                  >
+                    <video src={decryptedFileUrl} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-black bg-opacity-50 rounded-full p-3">
+                        ▶️
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-48 h-32 bg-gray-200 rounded-lg flex items-center justify-center">
+                    <p className="text-xs text-gray-500">Decrypting video...</p>
+                  </div>
+                )
+              )}
+
+              {msg.fileType === "file" && (
+                <div
+                  className="flex items-center gap-2 bg-white bg-opacity-20 p-2 rounded-lg cursor-pointer hover:bg-opacity-30"
+                  onClick={() => decryptedFileUrl && setViewerOpen(true)}  // ← open viewer
+                >
+                  <span>📄</span>
+                  <span className="text-sm truncate">{msg.fileName}</span>
+                  {!decryptedFileUrl && (
+                    <span className="text-xs opacity-70">Decrypting...</span>
+                  )}
+                </div>
+              )}
+
+              {/* MEDIA VIEWER MODAL */}
+              {viewerOpen && decryptedFileUrl && (
+                <MediaViewer
+                  url={decryptedFileUrl}
+                  type={msg.fileType}
+                  fileName={msg.fileName}
+                  onClose={() => setViewerOpen(false)}
+                />
+              )}
+            </div>
+          )}
         </div>
+
 
         {/* TIMESTAMP + READ RECEIPT */}
         {isLastInGroup && (
@@ -75,7 +197,7 @@ const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) =
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 };
 

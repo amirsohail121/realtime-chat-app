@@ -8,7 +8,15 @@ import { IoPersonCircleOutline } from "react-icons/io5";
 import { socket } from "../socket/socket";
 import api from "../api/api";
 import MessageBubble from "../components/MessageBubble";
-import { encryptMessage, getPrivateKey, decryptMessage } from "../utils/crypto";
+import {
+  encryptMessage,
+  decryptMessage,
+  getPrivateKey,
+  encryptFile,
+  decryptFile,
+  encryptAesKey,
+  decryptAesKey,
+} from "../utils/crypto";
 
 const getDateLabel = (dateStr) => {
   const date = new Date(dateStr);
@@ -34,21 +42,46 @@ const ChatWindow = () => {
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeout = useRef(null);
 
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
   const decryptContent = (msg) => {
-    const privateKey = getPrivateKey();
+    // If this is a file message with no text content, return empty
+
+    if (msg.fileUrl && !msg.content) return "";
+    const privateKey = getPrivateKey(user?._id);
+    if (!privateKey) return "[Private key not found]";
+
     const isSender = msg.sender._id === user?._id;
+
+    if (isSender && !msg.contentForSender) {
+      return "[Message sent before encryption]";
+    }
 
     const encryptedContent = isSender
       ? msg.contentForSender
       : msg.content;
 
-
-
-    const result = decryptMessage(encryptedContent, privateKey);
-
-
-    return result;
+    return decryptMessage(encryptedContent, privateKey);
   };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSelectedFile(file);
+
+    // Show preview for images
+    if (file.type.startsWith("image/")) {
+      setFilePreview(URL.createObjectURL(file));
+    } else if (file.type.startsWith("video/")) {
+      setFilePreview("video");
+    } else {
+      setFilePreview("file");
+    }
+  };
+
   useEffect(() => {
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop_typing", () => setIsTyping(false));
@@ -93,6 +126,74 @@ const ChatWindow = () => {
 
     } catch (err) {
       console.error("Failed to send message", err);
+    }
+  };
+
+  const sendFile = async () => {
+    if (!selectedFile || !selectedChat) return;
+
+    const otherUser = selectedChat.users.find(u => u._id !== user?._id);
+    if (!otherUser?.publicKey) return;
+
+    setUploading(true);
+
+    try {
+      // 1. Encrypt the file
+      const { encryptedBytes, aesKey, iv } = await encryptFile(selectedFile);
+
+      // 2. Convert encrypted bytes to Blob and upload
+      const byteArray = new Uint8Array(encryptedBytes.length);
+      for (let i = 0; i < encryptedBytes.length; i++) {
+        byteArray[i] = encryptedBytes.charCodeAt(i);
+      }
+      const encryptedBlob = new Blob([byteArray]);
+      const formData = new FormData();
+      formData.append("image", encryptedBlob, selectedFile.name + ".enc");
+
+      // 3. Upload to server
+      const uploadRes = await api.post("/upload", formData);
+      const fileUrl = uploadRes.data.url;
+
+      // 4. Encrypt AES key for recipient AND sender
+      const encryptedAesKeyForRecipient = encryptAesKey(aesKey, otherUser.publicKey);
+      const encryptedAesKeyForSender = user?.publicKey
+        ? encryptAesKey(aesKey, user.publicKey)
+        : "";
+
+      // 5. Determine file type
+      const fileType = selectedFile.type.startsWith("image/")
+        ? "image"
+        : selectedFile.type.startsWith("video/")
+          ? "video"
+          : "file";
+
+      // 6. Send message with file info
+      const res = await api.post("/messages", {
+        chatId: selectedChat._id,
+        content: "",
+        contentForSender: "",
+        fileUrl,
+        fileType,
+        fileName: selectedFile.name,
+        encryptedAesKey: encryptedAesKeyForRecipient,
+        encryptedAesKeyForSender,
+        iv,
+      });
+
+      socket.emit("send_message", {
+        chatId: selectedChat._id,
+        ...res.data,
+      });
+
+      // Clear file selection
+      setSelectedFile(null);
+      setFilePreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+
+    } catch (err) {
+      console.error("Failed to send file", err);
+    } finally {
+      setUploading(false);
     }
   };
   const handleTyping = (e) => {
@@ -220,22 +321,65 @@ const ChatWindow = () => {
       </div>
 
       {/* INPUT AREA */}
-      <div className="px-4 py-3 bg-white border-t border-slate-200">
-        <div className="flex items-center gap-3 bg-slate-100 rounded-full px-4 py-2.5 max-w-4xl mx-auto focus-within:ring-2 focus-within:ring-teal-500 transition-shadow">
+      <div className="px-4 py-3 bg-white border-t border-gray-200">
+
+        {/* FILE PREVIEW */}
+        {filePreview && (
+          <div className="mb-2 p-2 bg-gray-100 rounded-lg flex items-center gap-2">
+            {filePreview === "video" && <span>🎥</span>}
+            {filePreview === "file" && <span>📄</span>}
+            {filePreview !== "video" && filePreview !== "file" && (
+              <img src={filePreview} className="w-16 h-16 object-cover rounded" />
+            )}
+            <span className="text-sm text-gray-600 flex-1 truncate">
+              {selectedFile?.name}
+            </span>
+            <button
+              onClick={() => { setSelectedFile(null); setFilePreview(null); }}
+              className="text-red-400 hover:text-red-600 font-bold"
+            >
+              ✕
+            </button>
+            <button
+              onClick={sendFile}
+              disabled={uploading}
+              className="bg-indigo-500 text-white px-3 py-1 rounded-lg text-sm"
+            >
+              {uploading ? "Encrypting..." : "Send"}
+            </button>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 bg-gray-100 rounded-full px-4 py-2.5 max-w-4xl mx-auto">
+          {/* FILE ATTACH BUTTON */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="text-gray-500 hover:text-indigo-500 transition"
+          >
+            📎
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept="image/*,video/*,.pdf,.doc,.docx,.txt,.zip"
+            className="hidden"
+          />
+
           <input
             type="text"
             value={messageInput}
             onChange={handleTyping}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Type a message..."
-            className="flex-1 bg-transparent text-slate-800 text-sm focus:outline-none placeholder-slate-400"
+            className="flex-1 bg-transparent text-black text-sm focus:outline-none placeholder-gray-400"
           />
           <button
             onClick={sendMessage}
             disabled={!messageInput.trim()}
-            className={`p-2.5 rounded-full transition-all duration-200 ${messageInput.trim()
-              ? "bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/30"
-              : "bg-slate-300 text-slate-400 cursor-not-allowed"
+            className={`p-2 rounded-full transition-all duration-200 ${messageInput.trim()
+              ? "bg-indigo-500 hover:bg-indigo-600 text-white shadow-md"
+              : "bg-gray-300 text-gray-400 cursor-not-allowed"
               }`}
           >
             <FiSend size={16} />
