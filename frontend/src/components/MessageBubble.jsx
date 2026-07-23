@@ -5,6 +5,7 @@ import { BsCheck2, BsCheck2All } from "react-icons/bs";
 import { IoPersonCircleOutline } from "react-icons/io5";
 import { decryptFile, decryptAesKey, getPrivateKey } from "../utils/crypto";
 import MediaViewer from "./MediaViewer";
+import { FiClock } from "react-icons/fi";
 
 const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) => {
   const { user } = useContext(AuthContext);
@@ -181,6 +182,16 @@ const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) =
                 <BsCheck2 size={14} className="text-slate-400" />
               )
             )}
+          </div>
+        )}
+
+        {/* Scheduled badge */}
+        {msg.status === "scheduled" && (
+          <div className="flex items-center gap-1 mt-1">
+            <FiClock size={10} className="text-yellow-500" />
+            <p className="text-xs text-yellow-500">
+              Scheduled: {new Date(msg.scheduledAt).toLocaleString()}
+            </p>
           </div>
         )}
       </div>

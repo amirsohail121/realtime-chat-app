@@ -15,6 +15,7 @@ const sendMessage = async (req, res) => {
       encryptedAesKey,
       encryptedAesKeyForSender,
       iv,
+      scheduledAt, // ← add this
     } = req.body;
 
     if (!chatId || (!content && !fileUrl)) {
@@ -22,6 +23,8 @@ const sendMessage = async (req, res) => {
         .status(400)
         .json({ message: "chatId and content or file are required" });
     }
+
+    const status = scheduledAt ? "scheduled" : "sent";
 
     let message = await Message.create({
       sender: req.user._id,
@@ -34,11 +37,16 @@ const sendMessage = async (req, res) => {
       encryptedAesKeyForSender: encryptedAesKeyForSender || "",
       iv: iv || "",
       chat: chatId,
+      status,
+      scheduledAt: scheduledAt || null,
     });
 
-    await Chat.findByIdAndUpdate(chatId, { latestMessage: message._id });
-    message = await message.populate("sender", "-password");
+    // Only update latestMessage if NOT scheduled
+    if (!scheduledAt) {
+      await Chat.findByIdAndUpdate(chatId, { latestMessage: message._id });
+    }
 
+    message = await message.populate("sender", "-password");
     res.status(201).json(message);
   } catch (err) {
     return res.status(500).json({ message: err.message });

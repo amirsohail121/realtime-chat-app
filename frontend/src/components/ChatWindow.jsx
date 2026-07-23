@@ -2,12 +2,13 @@ import { useContext, useState, useRef, useEffect } from "react";
 import { ChatContext } from "../context/ChatContext";
 import { AuthContext } from "../context/AuthContext";
 import TopBar from "../components/TopBar";
-import { FiMessageCircle, FiSend } from "react-icons/fi";
+import { FiMessageCircle, FiSend, FiClock } from "react-icons/fi";
 import { BsCheck2, BsCheck2All } from "react-icons/bs";
 import { IoPersonCircleOutline } from "react-icons/io5";
 import { socket } from "../socket/socket";
 import api from "../api/api";
 import MessageBubble from "../components/MessageBubble";
+import ScheduleModal from "./ScheduleModal";
 import {
   encryptMessage,
   decryptMessage,
@@ -42,10 +43,42 @@ const ChatWindow = () => {
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeout = useRef(null);
 
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [filePreview, setFilePreview] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [filePreviews, setFilePreviews] = useState([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  // schedule msg function
+  const sendScheduledMessage = async (scheduledAt) => {
+    if (!messageInput.trim() || !selectedChat) return;
+
+    const otherUser = selectedChat.users.find(u => u._id !== user?._id);
+    if (!otherUser?.publicKey) return;
+
+    try {
+      const encryptedForRecipient = encryptMessage(messageInput, otherUser.publicKey);
+      const encryptedForSender = user?.publicKey
+        ? encryptMessage(messageInput, user.publicKey)
+        : "";
+
+      await api.post("/messages", {
+        chatId: selectedChat._id,
+        content: encryptedForRecipient,
+        contentForSender: encryptedForSender,
+        scheduledAt: scheduledAt.toISOString(),
+      });
+
+      setMessageInput("");
+      setShowScheduleModal(false);
+
+      // Show success toast
+      alert(`✅ Message scheduled for ${scheduledAt.toLocaleString()}`);
+
+    } catch (err) {
+      console.error("Failed to schedule message", err);
+    }
+  };
 
   const decryptContent = (msg) => {
     // If file message with no text content → return empty string
@@ -71,18 +104,23 @@ const ChatWindow = () => {
   };
 
   const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setSelectedFile(file);
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
 
-    // Show preview for images
-    if (file.type.startsWith("image/")) {
-      setFilePreview(URL.createObjectURL(file));
-    } else if (file.type.startsWith("video/")) {
-      setFilePreview("video");
-    } else {
-      setFilePreview("file");
-    }
+    setSelectedFiles(files);
+
+    // Generate previews for all files
+    const previews = files.map(file => {
+      if (file.type.startsWith("image/")) {
+        return { url: URL.createObjectURL(file), type: "image", name: file.name };
+      } else if (file.type.startsWith("video/")) {
+        return { url: null, type: "video", name: file.name };
+      } else {
+        return { url: null, type: "file", name: file.name };
+      }
+    });
+
+    setFilePreviews(previews);
   };
 
   useEffect(() => {
@@ -132,8 +170,8 @@ const ChatWindow = () => {
     }
   };
 
-  const sendFile = async () => {
-    if (!selectedFile || !selectedChat) return;
+  const sendFiles = async () => {
+    if (!selectedFiles.length || !selectedChat) return;
 
     const otherUser = selectedChat.users.find(u => u._id !== user?._id);
     if (!otherUser?.publicKey) return;
@@ -141,54 +179,53 @@ const ChatWindow = () => {
     setUploading(true);
 
     try {
-      // 1. Encrypt file (now returns Uint8Array, not string)
-      const { encryptedBytes, aesKey, iv } = await encryptFile(selectedFile);
+      // Send each file one by one
+      for (const file of selectedFiles) {
+        const { encryptedBytes, aesKey, iv } = await encryptFile(file);
 
-      // 2. Upload encrypted file directly as blob
-      const encryptedBlob = new Blob([encryptedBytes]);
-      const formData = new FormData();
-      formData.append("image", encryptedBlob, selectedFile.name + ".enc");
+        const encryptedBlob = new Blob([encryptedBytes]);
+        const formData = new FormData();
+        formData.append("image", encryptedBlob, file.name + ".enc");
 
-      const uploadRes = await api.post("/upload", formData);
-      const fileUrl = uploadRes.data.url;
+        const uploadRes = await api.post("/upload", formData);
+        const fileUrl = uploadRes.data.url;
 
-      // 3. Encrypt AES key for recipient AND sender
-      const encryptedAesKeyForRecipient = encryptAesKey(aesKey, otherUser.publicKey);
-      const encryptedAesKeyForSender = user?.publicKey
-        ? encryptAesKey(aesKey, user.publicKey)
-        : "";
+        const encryptedAesKeyForRecipient = encryptAesKey(aesKey, otherUser.publicKey);
+        const encryptedAesKeyForSender = user?.publicKey
+          ? encryptAesKey(aesKey, user.publicKey)
+          : "";
 
-      // 4. Determine file type
-      const fileType = selectedFile.type.startsWith("image/")
-        ? "image"
-        : selectedFile.type.startsWith("video/")
-          ? "video"
-          : "file";
+        const fileType = file.type.startsWith("image/")
+          ? "image"
+          : file.type.startsWith("video/")
+            ? "video"
+            : "file";
 
-      // 5. Send message
-      const res = await api.post("/messages", {
-        chatId: selectedChat._id,
-        content: "",
-        contentForSender: "",
-        fileUrl,
-        fileType,
-        fileName: selectedFile.name,
-        encryptedAesKey: encryptedAesKeyForRecipient,
-        encryptedAesKeyForSender,
-        iv,
-      });
+        const res = await api.post("/messages", {
+          chatId: selectedChat._id,
+          content: "",
+          contentForSender: "",
+          fileUrl,
+          fileType,
+          fileName: file.name,
+          encryptedAesKey: encryptedAesKeyForRecipient,
+          encryptedAesKeyForSender,
+          iv,
+        });
 
-      socket.emit("send_message", {
-        chatId: selectedChat._id,
-        ...res.data,
-      });
+        socket.emit("send_message", {
+          chatId: selectedChat._id,
+          ...res.data,
+        });
+      }
 
-      setSelectedFile(null);
-      setFilePreview(null);
+      // Clear after all files sent
+      setSelectedFiles([]);
+      setFilePreviews([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
 
     } catch (err) {
-      console.error("Failed to send file", err);
+      console.error("Failed to send files", err);
     } finally {
       setUploading(false);
     }
@@ -321,29 +358,54 @@ const ChatWindow = () => {
       <div className="px-4 py-3 bg-white border-t border-gray-200">
 
         {/* FILE PREVIEW */}
-        {filePreview && (
-          <div className="mb-2 p-2 bg-gray-100 rounded-lg flex items-center gap-2">
-            {filePreview === "video" && <span>🎥</span>}
-            {filePreview === "file" && <span>📄</span>}
-            {filePreview !== "video" && filePreview !== "file" && (
-              <img src={filePreview} className="w-16 h-16 object-cover rounded" />
-            )}
-            <span className="text-sm text-gray-600 flex-1 truncate">
-              {selectedFile?.name}
-            </span>
-            <button
-              onClick={() => { setSelectedFile(null); setFilePreview(null); }}
-              className="text-red-400 hover:text-red-600 font-bold"
-            >
-              ✕
-            </button>
-            <button
-              onClick={sendFile}
-              disabled={uploading}
-              className="bg-indigo-500 text-white px-3 py-1 rounded-lg text-sm"
-            >
-              {uploading ? "Encrypting..." : "Send"}
-            </button>
+        {filePreviews.length > 0 && (
+          <div className="mb-2 p-2 bg-gray-100 rounded-lg">
+            <div className="flex flex-wrap gap-2 mb-2">
+              {filePreviews.map((preview, index) => (
+                <div key={index} className="relative">
+                  {preview.type === "image" ? (
+                    <img
+                      src={preview.url}
+                      className="w-16 h-16 object-cover rounded"
+                    />
+                  ) : preview.type === "video" ? (
+                    <div className="w-16 h-16 bg-gray-300 rounded flex items-center justify-center">
+                      🎥
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 bg-gray-300 rounded flex items-center justify-center">
+                      📄
+                        </div>
+                  )}
+                  <p className="text-xs text-gray-500 truncate w-16">{preview.name}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">
+                {selectedFiles.length} file(s) selected
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedFiles([]);
+                    setFilePreviews([]);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="text-red-400 hover:text-red-600 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={sendFiles}
+                  disabled={uploading}
+                  className="bg-indigo-500 text-white px-3 py-1 rounded-lg text-sm"
+                >
+                  {uploading ? "Sending..." : `Send ${selectedFiles.length} file(s)`}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -360,6 +422,7 @@ const ChatWindow = () => {
             ref={fileInputRef}
             onChange={handleFileSelect}
             accept="image/*,video/*,.pdf,.doc,.docx,.txt,.zip"
+            multiple
             className="hidden"
           />
 
@@ -371,6 +434,15 @@ const ChatWindow = () => {
             placeholder="Type a message..."
             className="flex-1 bg-transparent text-black text-sm focus:outline-none placeholder-gray-400"
           />
+          {/* //clock */}
+          <button
+            onClick={() => setShowScheduleModal(true)}
+            className="text-gray-500 hover:text-indigo-500 transition"
+            title="Schedule message"
+          >
+            <FiClock size={18} />
+          </button>
+          {/* sendMsg */}
           <button
             onClick={sendMessage}
             disabled={!messageInput.trim()}
@@ -382,6 +454,13 @@ const ChatWindow = () => {
             <FiSend size={16} />
           </button>
         </div>
+        {/* Schedule Modal */}
+        {showScheduleModal && (
+          <ScheduleModal
+            onSchedule={sendScheduledMessage}
+            onClose={() => setShowScheduleModal(false)}
+          />
+        )}
       </div>
     </div>
   );

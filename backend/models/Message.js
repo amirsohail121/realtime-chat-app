@@ -17,6 +17,16 @@ const messageSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    //msg scheduling
+    status: {
+      type: String,
+      enum: ["sent", "scheduled"],
+      default: "sent",
+    },
+    scheduledAt: {
+      type: Date,
+      default: null,
+    },
     // File fields
     fileUrl: {
       type: String,

@@ -9,6 +9,7 @@ const { Server } = require("socket.io");
 const socketHandler = require("./socket/socketHandler");
 const uploadRoutes = require("./routes/uploadRoutes");
 const userRoutes = require("./routes/userRoutes");
+const startScheduler = require("./utils/scheduler");
 
 const cors = require("cors");
 
@@ -31,6 +32,7 @@ app.use(
 );
 
 socketHandler(io);
+startScheduler(io);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
