@@ -48,14 +48,15 @@ const ChatWindow = () => {
   const fileInputRef = useRef(null);
 
   const decryptContent = (msg) => {
-    // If this is a file message with no text content, return empty
+    // If file message with no text content → return empty string
+    if (msg.fileUrl && (!msg.content || msg.content === "")) return "";
 
-    if (msg.fileUrl && !msg.content) return "";
     const privateKey = getPrivateKey(user?._id);
     if (!privateKey) return "[Private key not found]";
 
     const isSender = msg.sender._id === user?._id;
 
+    // Old messages before encryption
     if (isSender && !msg.contentForSender) {
       return "[Message sent before encryption]";
     }
@@ -63,6 +64,8 @@ const ChatWindow = () => {
     const encryptedContent = isSender
       ? msg.contentForSender
       : msg.content;
+
+    if (!encryptedContent) return "";
 
     return decryptMessage(encryptedContent, privateKey);
   };
@@ -138,36 +141,31 @@ const ChatWindow = () => {
     setUploading(true);
 
     try {
-      // 1. Encrypt the file
+      // 1. Encrypt file (now returns Uint8Array, not string)
       const { encryptedBytes, aesKey, iv } = await encryptFile(selectedFile);
 
-      // 2. Convert encrypted bytes to Blob and upload
-      const byteArray = new Uint8Array(encryptedBytes.length);
-      for (let i = 0; i < encryptedBytes.length; i++) {
-        byteArray[i] = encryptedBytes.charCodeAt(i);
-      }
-      const encryptedBlob = new Blob([byteArray]);
+      // 2. Upload encrypted file directly as blob
+      const encryptedBlob = new Blob([encryptedBytes]);
       const formData = new FormData();
       formData.append("image", encryptedBlob, selectedFile.name + ".enc");
 
-      // 3. Upload to server
       const uploadRes = await api.post("/upload", formData);
       const fileUrl = uploadRes.data.url;
 
-      // 4. Encrypt AES key for recipient AND sender
+      // 3. Encrypt AES key for recipient AND sender
       const encryptedAesKeyForRecipient = encryptAesKey(aesKey, otherUser.publicKey);
       const encryptedAesKeyForSender = user?.publicKey
         ? encryptAesKey(aesKey, user.publicKey)
         : "";
 
-      // 5. Determine file type
+      // 4. Determine file type
       const fileType = selectedFile.type.startsWith("image/")
         ? "image"
         : selectedFile.type.startsWith("video/")
           ? "video"
           : "file";
 
-      // 6. Send message with file info
+      // 5. Send message
       const res = await api.post("/messages", {
         chatId: selectedChat._id,
         content: "",
@@ -185,7 +183,6 @@ const ChatWindow = () => {
         ...res.data,
       });
 
-      // Clear file selection
       setSelectedFile(null);
       setFilePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";

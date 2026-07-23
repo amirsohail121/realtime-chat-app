@@ -21,41 +21,28 @@ const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) =
       if (!privateKey) return;
 
       const isSender = msg.sender._id === user?._id;
-
-      // Get correct encrypted AES key
       const encryptedAesKey = isSender
         ? msg.encryptedAesKeyForSender
         : msg.encryptedAesKey;
 
       if (!encryptedAesKey) return;
 
-      // Decrypt AES key
-      const aesKey = decryptAesKey(encryptedAesKey, privateKey);
-      if (!aesKey) return;
+      // Decrypt AES key → get Uint8Array
+      const aesKeyBytes = decryptAesKey(encryptedAesKey, privateKey);
+      if (!aesKeyBytes) return;
 
-      
       // Fetch encrypted file
       const response = await fetch(msg.fileUrl);
       const encryptedBuffer = await response.arrayBuffer();
 
-      // ✅ Convert chunk by chunk to avoid stack overflow
-      const uint8Array = new Uint8Array(encryptedBuffer);
-      let binaryString = "";
-      const chunkSize = 8192;
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.subarray(i, i + chunkSize);
-        binaryString += String.fromCharCode.apply(null, chunk);
-      }
-      const encryptedBase64 = btoa(binaryString);
-
-      // Decrypt file
+      // Decrypt file using Web Crypto
       const mimeType = msg.fileType === "image"
         ? "image/jpeg"
         : msg.fileType === "video"
           ? "video/mp4"
           : "application/octet-stream";
 
-      const url = decryptFile(encryptedBase64, aesKey, msg.iv, mimeType);
+      const url = await decryptFile(encryptedBuffer, aesKeyBytes, msg.iv, mimeType);
       setDecryptedFileUrl(url);
     };
 
@@ -108,11 +95,11 @@ const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) =
           ? "bg-teal-500 text-white rounded-2xl rounded-br-sm"
           : "bg-white text-slate-800 border border-slate-100 rounded-2xl rounded-bl-sm"
           }`}>
-          {/* Only show text if there's content */}
-          {msg.content && (
+          {/* Only show text if there's actual content */}
+          {msg.content && msg.content !== "" && (
             <p className="text-sm leading-relaxed">{decryptContent(msg)}</p>
           )}
-          
+
           {/* FILE DISPLAY */}
           {msg.fileUrl && (
             <div className="mt-1">
