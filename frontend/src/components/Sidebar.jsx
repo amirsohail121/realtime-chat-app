@@ -320,7 +320,7 @@ const Sidebar = () => {
               ))}
             </div>
           </div>
-          )
+
 
           {/* CHAT LIST */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 space-y-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>

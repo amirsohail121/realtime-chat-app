@@ -5,8 +5,7 @@ const Chat = require("../models/Chat");
 const startScheduler = (io) => {
   // Run every minute
   cron.schedule("* * * * *", async () => {
-    console.log("⏰ Checking scheduled messages...");
-
+   
     try {
       // Find all messages due to be sent
       const dueMessages = await Message.find({
@@ -35,7 +34,7 @@ const startScheduler = (io) => {
     }
   });
 
-  console.log("⏰ Message scheduler started");
+ 
 };
 
 module.exports = startScheduler;

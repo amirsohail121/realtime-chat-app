@@ -171,29 +171,41 @@ const ChatWindow = () => {
   };
 
   const sendFiles = async () => {
+
+
     if (!selectedFiles.length || !selectedChat) return;
 
     const otherUser = selectedChat.users.find(u => u._id !== user?._id);
-    if (!otherUser?.publicKey) return;
+
+
+    if (!otherUser?.publicKey) {
+
+      return;
+    }
 
     setUploading(true);
 
     try {
-      // Send each file one by one
       for (const file of selectedFiles) {
+
+
         const { encryptedBytes, aesKey, iv } = await encryptFile(file);
+
 
         const encryptedBlob = new Blob([encryptedBytes]);
         const formData = new FormData();
         formData.append("image", encryptedBlob, file.name + ".enc");
 
         const uploadRes = await api.post("/upload", formData);
-        const fileUrl = uploadRes.data.url;
 
+
+        const fileUrl = uploadRes.data.url;
         const encryptedAesKeyForRecipient = encryptAesKey(aesKey, otherUser.publicKey);
         const encryptedAesKeyForSender = user?.publicKey
           ? encryptAesKey(aesKey, user.publicKey)
           : "";
+
+
 
         const fileType = file.type.startsWith("image/")
           ? "image"
@@ -213,23 +225,26 @@ const ChatWindow = () => {
           iv,
         });
 
+
+
         socket.emit("send_message", {
           chatId: selectedChat._id,
           ...res.data,
         });
       }
 
-      // Clear after all files sent
       setSelectedFiles([]);
       setFilePreviews([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
 
     } catch (err) {
-      console.error("Failed to send files", err);
+      console.error("Failed to send files:", err);
     } finally {
       setUploading(false);
     }
   };
+
+
   const handleTyping = (e) => {
     setMessageInput(e.target.value);
     socket.emit("typing", selectedChat._id);
@@ -248,8 +263,7 @@ const ChatWindow = () => {
     return "✓"; // single tick (sent)
   };
 
-  // Small avatar helper: falls back to a react-icon instead of an
-  // external placeholder image when there's no profile picture.
+
   const Avatar = ({ src, alt, size = 28 }) => {
     const px = `${size}px`;
     return src ? (
