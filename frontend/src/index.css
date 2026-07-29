@@ -1,32 +1,29 @@
 @import "tailwindcss";
 
-/*
-  Palette: Primary / Hover / Light Background.
-  Tailwind v4 reads custom properties inside @theme and turns them
-  straight into utility classes — no tailwind.config.js needed.
-*/
 @theme {
-  /* Brand red — send button, active bottom-nav icon, unread badge,
-     "sent" chat bubbles */
-  --color-primary: #E63946;
-  --color-primary-dark: #D62839; /* hover / pressed state */
+  /* === Bubbles === */
+  --bubble-sent-bg: #CFF7F1;        /* light teal/mint — your message bubble */
+  --bubble-sent-text: #0A1930;
+  --bubble-received-bg: #A78BFA;    /* purple — Sarah's message bubble */
+  --bubble-received-text: #0A1930;
 
-  /* Neutral surfaces */
-  --color-bg: #FFF5F6;           /* sidebar / app background (light background) */
-  --color-bg-secondary: #FBE4E6; /* chat panel background - tinted step down from bg */
-  --color-surface: #FFFFFF;      /* received message bubble */
+  /* === Brand === */
+                                     /* sent bubbles, send button, lock badge, links */
+  --color-primary-light: #E4F6F3;   /* encryption banner, input field bg, subtle teal fills */
 
-  /* Text */
-  --color-text: #2E2E2E;         /* primary text */
-  --color-text-muted: #8A8A8A;   /* timestamps, secondary text */
+  --color-secondary: #7A4CDC;       /* accents, avatar ring, icons */
+  --color-secondary-light: #CBABFA; /* received message bubbles */
 
-  /* Status */
-  --color-online: #34D399;     /* online presence dot */
-  --color-scheduled: #F59E0B;  /* scheduled-message badge */
+  /* === Text === */
+  --color-heading: #0A1930;         /* names, headings, primary text */
+  --color-body: #4B5563;            /* secondary/muted text, timestamps */
 
-  /* File-type icon colors (attachment cards) */
-  --color-file-pdf: #EF4444;
-  --color-file-doc: #3B82F6;
-  --color-file-sheet: #10B981;
-  --color-file-archive: #F59E0B;
+  /* === Status === */
+  --color-success: #22C55E;         /* online indicator */
+  --color-warning: #FDAC2D;         /* alerts, "hidden/no one can see" style icons */
+
+  /* === Surfaces === */
+  --color-surface: #FFFFFF;         /* cards, header, composer bg */
+  --color-surface-tint: #F6F2FC;    /* chat window background */
+  --color-surface-muted: #F3F4F6;   /* dividers, disabled states */
 }

@@ -1,124 +1,171 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
-import api from "../api/api";
+import { useRef } from "react";
+import { useLogin, OTP_LENGTH } from "../hooks/useLogin";
+import chatwaveLogo from "../assets/chatwaveLogo.png";
+import banner from "../assets/banner.png";
+import { HiArrowRight } from "react-icons/hi";
 
 export default function Login() {
-  const { login, user } = useContext(AuthContext);   // also grab "user" here
-  const navigate = useNavigate();
+  const {
+    email,
+    setEmail,
+    otp,
+    otpSent,
+    error,
+    submitting,
+    maskedEmail,
+    handleSubmit,
+    updateOtpDigit,
+    applyPastedOtp,
+  } = useLogin();
 
-  useEffect(() => {
-    if (user) {
-      if (user.isProfileComplete) {
-        navigate("/chat", { replace: true });
-      } else {
-        navigate("/profile", { replace: true });
-      }
-    }
-  }, [user]);
 
+  const otpBoxRefs = useRef([]);
 
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [error, setError] = useState("");
-
-  // send otp
-  const handleSendOtp = async () => {
-    setError("");
-
-    if (!email) {
-      setError("Enter email");
-      return;
-    }
-
-    try {
-      await api.post("/auth/send-otp", { email });
-      setOtpSent(true)
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to send OTP");
+  const handleOtpDigitChange = (e, index) => {
+    const digit = e.target.value.replace(/\D/g, "").slice(-1);
+    updateOtpDigit(index, digit);
+    if (digit && index < OTP_LENGTH - 1) {
+      otpBoxRefs.current[index + 1]?.focus();
     }
   };
 
-  // verify otp
-  const handleVerifyOtp = async () => {
-    setError("");
-
-    if (!otp) {
-      setError("Enter OTP");
+  const handleOtpKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpBoxRefs.current[index - 1]?.focus();
       return;
     }
-
-    try {
-      const res = await api.post("/auth/verify-otp", { email, otp });
-      // console.log("verify-otp response:", res.data);
-      // console.log("isNewUser:", res.data.isNewUser);
-      login(res.data);
-      if (res.data.isNewUser) {
-        navigate("/profile");
-      } else {
-        navigate("/chat");
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Invalid OTP");
+    const isControlKey = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Enter"].includes(e.key);
+    if (!isControlKey && !/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
     }
+  };
 
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text");
+    applyPastedOtp(pasted);
+    requestAnimationFrame(() => {
+      const nextIndex = Math.min(pasted.replace(/\D/g, "").length, OTP_LENGTH - 1);
+      otpBoxRefs.current[nextIndex]?.focus();
+    });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">Email Login</h2>
-        <p className="text-gray-500 text-center mb-6">Secure access to your chat</p>
+    <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-surface-tint)] p-4 sm:p-8">
+      {/* SINGLE CARD — image and form live inside the same box */}
+      <div className="w-full max-w-4xl bg-[var(--color-surface)] rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+        {/* LEFT — illustration, shown in full with no cropping */}
+        <div className="hidden lg:flex items-center justify-center bg-white p-8">
+          <img
+            src={banner}
+            alt="Encrypted messaging illustration"
+            className="w-full h-full object-contain"
+          />
+        </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* EMAIL SCREEN */}
-        {!otpSent && (
-          <div className="space-y-4">
-            <input
-              type="email"
-              placeholder="Enter email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+        {/* RIGHT — form */}
+        <div className="flex items-center justify-center p-6 sm:p-10 lg:p-12">
+          <div className="w-full max-w-sm">
+            {/* logo */}
+            <img
+              src={chatwaveLogo}
+              alt="ChatWave"
+              className="h-11 sm:h-12 w-auto mb-8 mx-auto lg:mx-0"
             />
 
-            <button
-              onClick={handleSendOtp}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition duration-200"
-            >
-              Send OTP
-            </button>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] tracking-tight">
+              Welcome back
+            </h2>
+            <p className="text-[var(--color-body)] mt-2 mb-8">
+              {otpSent ? (
+                <>
+                  Enter the code sent to{" "}
+                  <span className="font-semibold text-[var(--color-secondary)]">{maskedEmail}</span>
+                </>
+              ) : (
+                "Log in with your email to keep chatting"
+              )}
+            </p>
+
+            {error && (
+              <div className="bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 text-[var(--color-warning)] px-4 py-3 rounded-lg mb-4 text-sm">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* EMAIL SCREEN */}
+              {!otpSent && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-heading)] mb-1.5">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoFocus
+                    className="w-full px-4 py-3 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-heading)] placeholder:text-[var(--color-body)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary)] transition"
+                  />
+                </div>
+              )}
+
+              {/* OTP SCREEN */}
+              {otpSent && (
+                <div>
+                  <div className="flex justify-between gap-3 sm:gap-4" onPaste={handleOtpPaste}>
+                    {Array.from({ length: OTP_LENGTH }).map((_, index) => (
+                      <input
+                        key={index}
+                        ref={(el) => (otpBoxRefs.current[index] = el)}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={1}
+                        placeholder="0"
+                        autoFocus={index === 0}
+                        value={otp[index] || ""}
+                        onChange={(e) => handleOtpDigitChange(e, index)}
+                        onKeyDown={(e) => handleOtpKeyDown(e, index)}
+                        className="w-11 h-12 sm:w-12 sm:h-14 text-center text-xl font-semibold rounded-xl bg-[var(--color-primary-light)] text-[var(--color-heading)] placeholder:text-[var(--color-body)]/30 border-2 border-transparent focus:outline-none focus:border-[var(--color-secondary)] focus:ring-2 focus:ring-[var(--color-secondary)]/30 transition"
+                      />
+                    ))}
+                  </div>
+
+                  {submitting && (
+                    <p className="text-xs text-[var(--color-body)] mt-2 flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full border-2 border-[var(--color-secondary)]/30 border-t-[var(--color-secondary)] animate-spin" />
+                      Verifying...
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* SUBMIT */}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="group w-full flex items-center justify-center gap-2 bg-[var(--color-secondary)] hover:brightness-110 active:brightness-95 active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100 text-white font-semibold py-3 rounded-lg transition-all duration-150 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {submitting ? (
+                  <>
+                    <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                    {otpSent ? "Verifying..." : "Sending..."}
+                  </>
+                ) : (
+                  <>
+                    {otpSent ? "Verify OTP" : "Send OTP"}
+                    <HiArrowRight
+                      size={18}
+                      className="transition-transform duration-200 group-hover:translate-x-1"
+                    />
+                  </>
+                )}
+              </button>
+            </form>
           </div>
-        )}
-
-        {/* OTP SCREEN */}
-        {otpSent && (
-          <div className="space-y-4">
-            <p className="text-gray-600 text-center">Enter OTP sent to <span className="font-semibold text-indigo-600">{email}</span></p>
-
-            <input
-              type="text"
-              placeholder="Enter OTP"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition text-center tracking-widest text-lg"
-            />
-
-            <button
-              onClick={handleVerifyOtp}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition duration-200"
-            >
-              Verify OTP
-            </button>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

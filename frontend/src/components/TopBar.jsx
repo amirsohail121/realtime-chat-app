@@ -1,42 +1,9 @@
-import { useContext } from "react";
-import { ChatContext } from "../context/ChatContext";
-import { AuthContext } from "../context/AuthContext";
-import { HiUserGroup } from "react-icons/hi2";
+import useTopBar from "../hooks/useTopBar";
+import { CiSearch } from "react-icons/ci";
+import { HiDotsVertical } from "react-icons/hi";
 
-const Topbar = () => {
-  const { selectedChat, onlineUsers } = useContext(ChatContext);
-  const { user } = useContext(AuthContext);
-
-  const otherUser = selectedChat && !selectedChat.isGroupChat
-    ? selectedChat.users.find(u => u?._id?.toString() !== user?._id?.toString())
-    : null;
-
-  const chatName = selectedChat
-    ? (selectedChat.isGroupChat ? selectedChat.chatName : otherUser?.name)
-    : "No Chat Selected";
-
-  const chatAvatar = selectedChat
-    ? (selectedChat.isGroupChat ? selectedChat.groupPic : otherUser?.profilePic)
-    : null;
-
-  const isOnline = selectedChat && !selectedChat.isGroupChat && onlineUsers.includes(otherUser?._id);
-
-  const getStatus = () => {
-    if (!selectedChat) return "Select a chat";
-
-    if (selectedChat.isGroupChat) {
-      return `${selectedChat.users.length} members`;  // ← group shows member count
-    }
-
-    if (onlineUsers.includes(otherUser?._id)) return "Online";
-    if (otherUser?.lastSeen) {
-      return `Last seen ${new Date(otherUser.lastSeen).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
-    }
-    return "Offline";
-  };
+const TopBar = () => {
+  const { chatName, chatAvatar, getStatus, isOnline } = useTopBar();
 
   return (
     <div className="h-16 text-white bg-teal-600 border-b border-teal-700 flex items-center px-5 shadow-sm sticky top-0 z-10">
@@ -70,7 +37,7 @@ const Topbar = () => {
           <h2 className="text-sm font-semibold text-white truncate">
             {chatName}
           </h2>
-          <p className="text-xs text-teal-100 truncate">
+          <p className="text-xs text-gray-200">
             {getStatus()}
           </p>
         </div>
@@ -79,4 +46,4 @@ const Topbar = () => {
   );
 };
 
-export default Topbar;
+export default TopBar;

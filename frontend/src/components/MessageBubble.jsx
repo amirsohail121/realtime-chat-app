@@ -1,67 +1,37 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { ChatContext } from "../context/ChatContext";
 import { BsCheck2, BsCheck2All } from "react-icons/bs";
 import { IoPersonCircleOutline } from "react-icons/io5";
-import { decryptFile, decryptAesKey, getPrivateKey } from "../utils/crypto";
+import { FiClock, FiFileText, FiDownload, FiPlay } from "react-icons/fi";
+import { useMessageBubble } from "../hooks/useMessages";
 import MediaViewer from "./MediaViewer";
-import { FiClock } from "react-icons/fi";
+
+// Pulls "PDF" / "DOCX" / "XLSX" etc. out of a filename for the file-card subtitle
+const getExtLabel = (fileName = "") => {
+  const parts = fileName.split(".");
+  return parts.length > 1 ? parts.pop().toUpperCase() : "FILE";
+};
 
 const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) => {
   const { user } = useContext(AuthContext);
   const { selectedChat } = useContext(ChatContext);
 
-  const [decryptedFileUrl, setDecryptedFileUrl] = useState(null);
-  const [viewerOpen, setViewerOpen] = useState(false);
+  const {
+    decryptedFileUrl,
+    viewerOpen,
+    setViewerOpen,
+    isSender,
+    getReadStatus,
+    isScheduled,
+    formattedTime,
+    formattedScheduledAt,
+  } = useMessageBubble(msg, user);
 
-  useEffect(() => {
-    if (!msg.fileUrl) return;
-
-    const decryptFileContent = async () => {
-      const privateKey = getPrivateKey(user?._id);
-      if (!privateKey) return;
-
-      const isSender = msg.sender._id === user?._id;
-      const encryptedAesKey = isSender
-        ? msg.encryptedAesKeyForSender
-        : msg.encryptedAesKey;
-
-      if (!encryptedAesKey) return;
-
-      // Decrypt AES key → get Uint8Array
-      const aesKeyBytes = decryptAesKey(encryptedAesKey, privateKey);
-      if (!aesKeyBytes) return;
-
-      // Fetch encrypted file
-      const response = await fetch(msg.fileUrl);
-      const encryptedBuffer = await response.arrayBuffer();
-
-      // Decrypt file using Web Crypto
-      const mimeType = msg.fileType === "image"
-        ? "image/jpeg"
-        : msg.fileType === "video"
-          ? "video/mp4"
-          : "application/octet-stream";
-
-      const url = await decryptFile(encryptedBuffer, aesKeyBytes, msg.iv, mimeType);
-      setDecryptedFileUrl(url);
-    };
-
-    decryptFileContent();
-  }, [msg]);
-
-
-  const isSender = msg.sender._id === user?._id;
-
-  const getReadStatus = () => {
-    if (!isSender) return null;
-    if (msg.readBy && msg.readBy.length > 0) return "✓✓";
-    return "✓";
-  };
+  const readStatus = getReadStatus();
 
   return (
-    <div className={`flex items-end gap-2 mb-0.5 ${isSender ? "justify-end" : "justify-start"}`}>
-
+    <div className={`flex items-end gap-2 ${isLastInGroup ? "mb-3" : "mb-1"} ${isSender ? "justify-end" : "justify-start"}`}>
       {/* AVATAR */}
       {!isSender && (
         <div className="w-7 flex-shrink-0">
@@ -73,7 +43,7 @@ const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) =
                 className="w-7 h-7 rounded-full object-cover"
               />
             ) : (
-              <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-full bg-[var(--color-surface-muted)] text-[var(--color-body)] flex items-center justify-center">
                 <IoPersonCircleOutline size={20} />
               </div>
             )
@@ -82,77 +52,117 @@ const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) =
       )}
 
       {/* BUBBLE + TIMESTAMP */}
-      <div className={`flex flex-col max-w-xs lg:max-w-md ${isSender ? "items-end" : "items-start"}`}>
-
-        {/* SENDER NAME in group */}
+      <div className={`flex flex-col mt-1 max-w-xs lg:max-w-md ${isSender ? "items-end" : "items-start"}`}>
         {selectedChat?.isGroupChat && !isSender && isFirstInGroup && (
-          <p className="text-xs font-medium text-teal-600 mb-1 ml-3">
+          <p className="text-xs font-medium text-[var(--color-secondary)] mb-1 ml-3">
             {msg.sender.name}
           </p>
         )}
 
-        {/* BUBBLE */}
-        <div className={`px-4 py-2.5 shadow-sm ${isSender
-          ? "bg-teal-500 text-white rounded-2xl rounded-br-sm"
-          : "bg-white text-slate-800 border border-slate-100 rounded-2xl rounded-bl-sm"
-          }`}>
-          {/* Only show text if there's actual content */}
+        <div
+          className={`shadow-md transition-shadow hover:shadow-lg ${msg.fileUrl && (msg.fileType === "image" || msg.fileType === "video") ? "p-1" : "px-4 py-2.5"
+            } ${msg.fileUrl && msg.fileType === "file" ? "!p-1.5" : ""
+            } ${isSender
+              ? "bg-gradient-to-br from-[var(--bubble-sent-bg)] to-[var(--color-primary-light)] text-[var(--bubble-sent-text)] rounded-3xl rounded-br-md"
+              : "bg-[var(--bubble-received-bg)] text-[var(--bubble-received-text)] ring-1 ring-[var(--color-secondary-light)]/40 rounded-3xl rounded-bl-md"
+            }`}
+        >
           {msg.content && msg.content !== "" && (
-            <p className="text-sm leading-relaxed">{decryptContent(msg)}</p>
+            <p
+              className={`text-sm leading-relaxed ${msg.fileUrl && (msg.fileType === "image" || msg.fileType === "video")
+                ? "px-3 pt-1.5"
+                : msg.fileType === "file"
+                  ? "px-2.5 pt-1.5"
+                  : ""
+                }`}
+            >
+              {decryptContent(msg)}
+            </p>
           )}
 
-          {/* FILE DISPLAY */}
           {msg.fileUrl && (
-            <div className="mt-1">
-              {msg.fileType === "image" && (
-                decryptedFileUrl ? (
+            <div className={msg.fileType === "image" || msg.fileType === "video" ? "" : "mt-1"}>
+              {/* IMAGE */}
+              {msg.fileType === "image" &&
+                (decryptedFileUrl ? (
                   <img
                     src={decryptedFileUrl}
                     alt="encrypted image"
-                    className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition"
-                    onClick={() => setViewerOpen(true)}  // ← open viewer instead of browser
+                    className="w-60 h-60 object-cover rounded-2xl cursor-pointer transition duration-200 hover:brightness-95 active:scale-[0.99]"
+                    onClick={() => setViewerOpen(true)}
                   />
                 ) : (
-                  <div className="w-48 h-32 bg-gray-200 rounded-lg flex items-center justify-center">
-                    <p className="text-xs text-gray-500">Decrypting image...</p>
+                  <div className="w-60 h-60 bg-[var(--color-surface-muted)] rounded-2xl flex flex-col items-center justify-center gap-2 animate-pulse">
+                    <div className="w-8 h-8 rounded-full border-2 border-[var(--color-body)]/30 border-t-[var(--color-body)] animate-spin" />
+                    <p className="text-xs text-[var(--color-body)]">Downloading image...</p>
                   </div>
-                )
-              )}
+                ))}
 
-              {msg.fileType === "video" && (
-                decryptedFileUrl ? (
+              {/* VIDEO */}
+              {msg.fileType === "video" &&
+                (decryptedFileUrl ? (
                   <div
-                    className="relative w-48 h-32 bg-black rounded-lg cursor-pointer overflow-hidden"
-                    onClick={() => setViewerOpen(true)}  // ← open viewer
+                    className="relative w-60 h-60 bg-black rounded-2xl cursor-pointer overflow-hidden group"
+                    onClick={() => setViewerOpen(true)}
                   >
                     <video src={decryptedFileUrl} className="w-full h-full object-cover" />
+
+                    {/* subtle bottom gradient so badges/controls stay legible on any thumbnail */}
+                    <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+
+                    {/* play button */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="bg-black bg-opacity-50 rounded-full p-3">
-                        ▶️
+                      <div className="bg-black/45 backdrop-blur-sm rounded-full p-3.5 transition-transform duration-200 group-hover:scale-110 group-active:scale-95">
+                        <FiPlay size={22} className="text-white translate-x-[1px]" fill="white" />
                       </div>
                     </div>
+
+                    {/* duration badge, WhatsApp-style */}
+                    {msg.duration && (
+                      <span className="absolute bottom-1.5 right-2 text-[11px] font-medium text-white bg-black/45 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
+                        {msg.duration}
+                      </span>
+                    )}
                   </div>
                 ) : (
-                  <div className="w-48 h-32 bg-gray-200 rounded-lg flex items-center justify-center">
-                    <p className="text-xs text-gray-500">Decrypting video...</p>
+                  <div className="w-60 h-40 bg-[var(--color-surface-muted)] rounded-2xl flex flex-col items-center justify-center gap-2 animate-pulse">
+                    <div className="w-8 h-8 rounded-full border-2 border-[var(--color-body)]/30 border-t-[var(--color-body)] animate-spin" />
+                    <p className="text-xs text-[var(--color-body)]">Downloading video...</p>
                   </div>
-                )
-              )}
+                ))}
 
+              {/* FILE (PDF, DOCX, etc.) — WhatsApp document card */}
               {msg.fileType === "file" && (
                 <div
-                  className="flex items-center gap-2 bg-white bg-opacity-20 p-2 rounded-lg cursor-pointer hover:bg-opacity-30"
-                  onClick={() => decryptedFileUrl && setViewerOpen(true)}  // ← open viewer
+                  className="flex items-center gap-3 w-64 max-w-full bg-white/10 hover:bg-white/[0.16] px-3 py-2.5 rounded-2xl cursor-pointer transition-colors"
+                  onClick={() => decryptedFileUrl && setViewerOpen(true)}
                 >
-                  <span>📄</span>
-                  <span className="text-sm truncate">{msg.fileName}</span>
-                  {!decryptedFileUrl && (
-                    <span className="text-xs opacity-70">Decrypting...</span>
+                  <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center">
+                    <FiFileText size={22} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate leading-tight">
+                      {msg.fileName || "Document"}
+                    </p>
+                    <p className="text-xs opacity-70 mt-0.5 flex items-center gap-1">
+                      {decryptedFileUrl ? (
+                        <>
+                          {getExtLabel(msg.fileName)}
+                          {msg.fileSize && <span>· {msg.fileSize}</span>}
+                        </>
+                      ) : (
+                        "Downloading..."
+                      )}
+                    </p>
+                  </div>
+
+                  {decryptedFileUrl && (
+                    <FiDownload size={17} className="flex-shrink-0 opacity-70" />
                   )}
                 </div>
               )}
 
-              {/* MEDIA VIEWER MODAL */}
               {viewerOpen && decryptedFileUrl && (
                 <MediaViewer
                   url={decryptedFileUrl}
@@ -165,37 +175,27 @@ const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) =
           )}
         </div>
 
-
-        {/* TIMESTAMP + READ RECEIPT */}
         {isLastInGroup && (
           <div className={`flex items-center gap-1 mt-1 mx-1 ${isSender ? "flex-row-reverse" : "flex-row"}`}>
-            <p className="text-xs text-slate-400">
-              {new Date(msg.createdAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-            {isSender && getReadStatus() && (
-              msg.readBy?.length > 0 ? (
-                <BsCheck2All size={14} className="text-teal-500" />
+            <p className="text-xs text-[var(--color-body)]">{formattedTime}</p>
+            {isSender && readStatus && (
+              readStatus === "read" ? (
+                <BsCheck2All size={14} className="text-[var(--color-success)]" />
               ) : (
-                <BsCheck2 size={14} className="text-slate-400" />
+                <BsCheck2 size={14} className="text-[var(--color-body)]" />
               )
             )}
           </div>
         )}
 
-        {/* Scheduled badge */}
-        {msg.status === "scheduled" && (
+        {isScheduled && (
           <div className="flex items-center gap-1 mt-1">
-            <FiClock size={10} className="text-yellow-500" />
-            <p className="text-xs text-yellow-500">
-              Scheduled: {new Date(msg.scheduledAt).toLocaleString()}
-            </p>
+            <FiClock size={10} className="text-[var(--color-warning)]" />
+            <p className="text-xs text-[var(--color-warning)]">Scheduled: {formattedScheduledAt}</p>
           </div>
         )}
       </div>
-    </div >
+    </div>
   );
 };
 
