@@ -1,12 +1,18 @@
 import useSidebar from "../hooks/useSidebar";
 import { useNavigate } from "react-router-dom";
 import { HiUserGroup } from "react-icons/hi2";
+import { BsChatDotsFill } from "react-icons/bs";
 import { IoCloseOutline, IoLogOutOutline, IoSearchOutline } from "react-icons/io5";
 import { decryptPreview } from "../utils/crypto";
+import { ChatItemSkeleton, SearchResultSkeleton } from "./Skeletons";
 import Avatar from "./Avatar";
+import logo from "../assets/logo.png";
+import { useContext } from "react";
+import { ChatContext } from "../context/ChatContext";
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const { chatsLoading } = useContext(ChatContext);
   const {
     user,
     logout,
@@ -34,17 +40,11 @@ const Sidebar = () => {
       {/* ===== LEFT SIDEBAR ===== */}
       <div className="w-20 px-4 py-6 flex flex-col items-center gap-6 bg-[var(--bubble-sent-bg)] border-r border-black/5">
 
-        {/* LOGO */}
-        <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center shadow-md shadow-black/10">
-          <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M12 3C6.98 3 3 6.58 3 11c0 2.28 1.06 4.33 2.78 5.78L5 21l4.03-1.71C9.98 19.42 10.98 19.5 12 19.5c5.02 0 9-3.58 9-8s-3.98-8.5-9-8.5Z"
-              fill="var(--color-heading)"
-            />
-            <circle cx="8.3" cy="11" r="1.15" fill="white" />
-            <circle cx="12" cy="11" r="1.15" fill="white" />
-            <circle cx="15.7" cy="11" r="1.15" fill="white" />
-          </svg>
+        {/* LOGO (mint background with white inner rounded square) */}
+        <div className="w-11 h-11 rounded-2xl bg-[#DFFCF3] flex items-center justify-center">
+          <div className="w-9 h-9 cursor-pointer rounded-xl bg-white flex items-center justify-center">
+            <BsChatDotsFill className="w-5 h-5 text-[#CFF7F1]" />
+          </div>
         </div>
 
         {/* NAV ICON */}
@@ -169,21 +169,13 @@ const Sidebar = () => {
         <div className="bg-[var(--color-surface)] border-b border-slate-200 px-6 py-4">
 
           {/* APP LOGO + HEADING */}
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-[var(--color-secondary)] flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M12 3C6.98 3 3 6.58 3 11c0 2.28 1.06 4.33 2.78 5.78L5 21l4.03-1.71C9.98 19.42 10.98 19.5 12 19.5c5.02 0 9-3.58 9-8s-3.98-8.5-9-8.5Z"
-                  fill="white"
-                />
-                <circle cx="8.3" cy="11" r="1.1" fill="var(--color-secondary)" />
-                <circle cx="12" cy="11" r="1.1" fill="var(--color-secondary)" />
-                <circle cx="15.7" cy="11" r="1.1" fill="var(--color-secondary)" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-semibold text-[var(--color-heading)]">
-              ChatWave
-            </h2>
+          <div className="">
+            <img
+              src={logo}
+              alt="Chat app logo"
+              className="w-40  select-none object-contain"
+              draggable="false"
+            />
           </div>
 
           {/* SEARCH PANEL */}
@@ -202,32 +194,44 @@ const Sidebar = () => {
 
             {/* SEARCH RESULTS */}
             <div className="mt-2 max-h-60 overflow-y-auto">
-              {searching && (
-                <p className="text-center text-[var(--color-body)] text-sm py-2">Searching...</p>
-              )}
-              {!searching && searchResults.length === 0 && searchQuery && (
+              {searching ? (
+                <>
+                  <SearchResultSkeleton />
+                  <SearchResultSkeleton />
+                  <SearchResultSkeleton />
+                </>
+              ) : searchResults.length === 0 && searchQuery ? (
                 <p className="text-center text-[var(--color-body)] text-sm py-2">No users found</p>
-              )}
-              {searchResults.map((u) => (
-                <div
-                  key={u._id}
-                  onClick={() => handleStartChat(u._id)}
-                  className="flex items-center gap-3 p-2 hover:bg-[var(--color-surface-tint)] rounded-xl cursor-pointer transition-colors"
-                >
-                  <Avatar src={u.profilePic} size={40} />
-                  <div>
-                    <p className="font-medium text-[var(--color-heading)] text-sm">{u.name}</p>
-                    <p className="text-[var(--color-body)] text-xs">{u.bio}</p>
+              ) : (
+                searchResults.map((u) => (
+                  <div
+                    key={u._id}
+                    onClick={() => handleStartChat(u._id)}
+                    className="flex items-center gap-3 p-2 hover:bg-[var(--color-surface-tint)] rounded-xl cursor-pointer transition-colors"
+                  >
+                    <Avatar src={u.profilePic} size={40} />
+                    <div>
+                      <p className="font-medium text-[var(--color-heading)] text-sm">{u.name}</p>
+                      <p className="text-[var(--color-body)] text-xs">{u.bio}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
 
         {/* CHAT LIST */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 space-y-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          {chatList.length > 0 ? (
+          {chatsLoading ? (
+            <>
+              <ChatItemSkeleton />
+              <ChatItemSkeleton />
+              <ChatItemSkeleton />
+              <ChatItemSkeleton />
+              <ChatItemSkeleton />
+            </>
+          ) : chatList.length > 0 ? (
             chatList.map((chat, index) => {
               const otherUser = chat.isGroupChat
                 ? null
@@ -274,7 +278,7 @@ const Sidebar = () => {
 
       </div>
     </div>
-    
+
   );
 };
 

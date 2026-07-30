@@ -1,7 +1,10 @@
-import { useState, useRef, memo } from "react";
-import { FiSend, FiClock } from "react-icons/fi";
+import { useState, useRef, memo, useEffect } from "react";
+import { FiSend, FiClock, FiX, FiEdit2, FiPaperclip, FiFile, FiFilm } from "react-icons/fi";
 import { socket } from "../socket/socket";
 import ScheduleModal from "./ScheduleModal";
+import ImageEditorModal from "./ImageEditorModal";
+import EmojiPicker, { EmojiStyle } from "emoji-picker-react";
+import { BsEmojiSmile } from "react-icons/bs";
 
 const MessageInput = memo(({ selectedChat, onSendMessage, onSendFiles, onSchedule }) => {
   const [messageInput, setMessageInput] = useState("");
@@ -9,8 +12,27 @@ const MessageInput = memo(({ selectedChat, onSendMessage, onSendFiles, onSchedul
   const [filePreviews, setFilePreviews] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
   const typingTimeout = useRef(null);
   const fileInputRef = useRef(null);
+
+  // emoji state
+  const emojiPickerRef = useRef(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const onEmojiClick = (emojiObject) => {
+    setMessageInput((prev) => prev + emojiObject.emoji);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleTyping = (e) => {
     setMessageInput(e.target.value);
@@ -37,7 +59,7 @@ const MessageInput = memo(({ selectedChat, onSendMessage, onSendFiles, onSchedul
     if (!files.length) return;
 
     setSelectedFiles(files);
-    const previews = files.map(file => {
+    const previews = files.map((file) => {
       if (file.type.startsWith("image/")) {
         return { url: URL.createObjectURL(file), type: "image", name: file.name };
       } else if (file.type.startsWith("video/")) {
@@ -47,6 +69,23 @@ const MessageInput = memo(({ selectedChat, onSendMessage, onSendFiles, onSchedul
       }
     });
     setFilePreviews(previews);
+  };
+
+  const removeFileAt = (index) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setFilePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // ===== EDIT: swap the file/preview at editingIndex with the cropped result =====
+  const handleEditSave = (blob, previewUrl) => {
+    const originalName = selectedFiles[editingIndex]?.name || "photo.jpg";
+    const editedFile = new File([blob], originalName, { type: "image/jpeg" });
+
+    setSelectedFiles((prev) => prev.map((f, i) => (i === editingIndex ? editedFile : f)));
+    setFilePreviews((prev) =>
+      prev.map((p, i) => (i === editingIndex ? { ...p, url: previewUrl } : p))
+    );
+    setEditingIndex(null);
   };
 
   const handleSendFiles = async () => {
@@ -59,50 +98,101 @@ const MessageInput = memo(({ selectedChat, onSendMessage, onSendFiles, onSchedul
   };
 
   return (
-    <div className="px-4 py-3 bg-white border-t border-gray-200">
+    <div className="px-4 py-3 bg-[var(--color-surface)] border-t border-[var(--color-surface-muted)]">
+
+      {/* IMAGE EDITOR MODAL */}
+      {editingIndex !== null && (
+        <ImageEditorModal
+          imageSrc={filePreviews[editingIndex]?.url}
+          aspect={4 / 3}
+          shape="rect"
+          outputSize={1080}
+          onCancel={() => setEditingIndex(null)}
+          onSave={handleEditSave}
+        />
+      )}
 
       {/* FILE PREVIEW */}
       {filePreviews.length > 0 && (
-        <div className="mb-2 p-2 bg-gray-100 rounded-lg">
-          <div className="flex flex-wrap gap-2 mb-2">
+        <div className="mb-3 p-3 bg-[var(--color-surface-tint)] rounded-2xl border border-[var(--color-surface-muted)]">
+          <div className="flex flex-wrap gap-3 mb-3">
             {filePreviews.map((preview, index) => (
-              <div key={index} className="relative">
-                {preview.type === "image" ? (
-                  <img src={preview.url} className="w-16 h-16 object-cover rounded" />
-                ) : preview.type === "video" ? (
-                  <div className="w-16 h-16 bg-gray-300 rounded flex items-center justify-center">🎥</div>
-                ) : (
-                  <div className="w-16 h-16 bg-gray-300 rounded flex items-center justify-center">📄</div>
+              <div key={index} className="relative group">
+                <div className="w-16 h-16 rounded-xl overflow-hidden shadow-sm bg-[var(--color-surface)] flex items-center justify-center">
+                  {preview.type === "image" ? (
+                    <img src={preview.url} className="w-full h-full object-cover" alt={preview.name} />
+                  ) : preview.type === "video" ? (
+                    <FiFilm size={20} className="text-[var(--color-secondary)]" />
+                  ) : (
+                    <FiFile size={20} className="text-[var(--color-secondary)]" />
+                  )}
+                </div>
+
+                {/* EDIT (image only) */}
+                {preview.type === "image" && (
+                  <button
+                    onClick={() => setEditingIndex(index)}
+                    title="Edit image"
+                    className="absolute inset-0 m-auto w-7 h-7 flex items-center justify-center rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <FiEdit2 size={13} />
+                  </button>
                 )}
-                <p className="text-xs text-gray-500 truncate w-16">{preview.name}</p>
+
+                {/* REMOVE */}
+                <button
+                  onClick={() => removeFileAt(index)}
+                  title="Remove"
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center rounded-full bg-[var(--color-heading)] text-white shadow-md hover:bg-red-500 transition-colors"
+                >
+                  <FiX size={11} />
+                </button>
+
+                <p className="text-[10px] text-[var(--color-body)] truncate w-16 mt-1 text-center">
+                  {preview.name}
+                </p>
               </div>
             ))}
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">{selectedFiles.length} file(s) selected</span>
+            <span className="text-sm text-[var(--color-body)]">
+              {selectedFiles.length} file{selectedFiles.length > 1 ? "s" : ""} selected
+            </span>
             <div className="flex gap-2">
               <button
-                onClick={() => { setSelectedFiles([]); setFilePreviews([]); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-                className="text-red-400 hover:text-red-600 text-sm"
+                onClick={() => {
+                  setSelectedFiles([]);
+                  setFilePreviews([]);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+                className="text-[var(--color-body)] hover:text-red-500 text-sm font-medium transition-colors px-2"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSendFiles}
                 disabled={uploading}
-                className="bg-indigo-500 text-white px-3 py-1 rounded-lg text-sm"
+                className="px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 disabled:opacity-60 transition-transform hover:scale-[1.03] shadow-sm cursor-pointer disabled:cursor-not-allowed"
+                style={{ background: "var(--bubble-sent-bg)", color: "var(--color-heading)" }}
               >
-                {uploading ? "Encrypting..." : `Send ${selectedFiles.length} file(s)`}
+                {uploading && (
+                  <div className="w-3.5 h-3.5 border-2 border-[var(--color-heading)]/30 border-t-[var(--color-heading)] rounded-full animate-spin" />
+                )}
+                {uploading ? "Sending..." : `Send ${selectedFiles.length}`}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex items-center gap-3 bg-gray-100 rounded-full px-4 py-2.5 max-w-4xl mx-auto">
+      <div className="relative flex items-center gap-2 bg-[var(--color-surface-tint)] rounded-full px-3 py-2 max-w-4xl mx-auto border border-transparent focus-within:border-[var(--color-secondary-light)] transition-colors">
         {/* FILE ATTACH */}
-        <button onClick={() => fileInputRef.current?.click()} className="text-gray-500 hover:text-indigo-500 transition">
-          📎
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="w-9 h-9 flex items-center justify-center rounded-full text-[var(--color-body)] hover:text-[var(--color-secondary)] hover:bg-[var(--color-surface)] transition-colors cursor-pointer"
+          title="Attach files"
+        >
+          <FiPaperclip size={18} />
         </button>
         <input
           type="file"
@@ -113,6 +203,29 @@ const MessageInput = memo(({ selectedChat, onSendMessage, onSendFiles, onSchedul
           className="hidden"
         />
 
+        {/* EMOJI PICKER */}
+        {showEmojiPicker && (
+          <div ref={emojiPickerRef} className="absolute bottom-full left-0 mb-2 z-50 shadow-xl rounded-xl overflow-hidden">
+            <EmojiPicker
+              onEmojiClick={onEmojiClick}
+              width={300}
+              height={400}
+              emojiStyle={EmojiStyle.NATIVE}
+            />
+          </div>
+        )}
+
+        <button
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          title="Emoji"
+          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors hover:bg-[var(--color-surface)] cursor-pointer"
+        >
+          <BsEmojiSmile
+            size={18}
+            style={{ color: showEmojiPicker ? "var(--color-secondary)" : "var(--color-body)" }}
+          />
+        </button>
+
         {/* TEXT INPUT */}
         <input
           type="text"
@@ -120,14 +233,14 @@ const MessageInput = memo(({ selectedChat, onSendMessage, onSendFiles, onSchedul
           onChange={handleTyping}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="Type a message..."
-          className="flex-1 bg-transparent text-black text-sm focus:outline-none placeholder-gray-400"
+          className="flex-1 bg-transparent text-[var(--color-heading)] text-sm focus:outline-none placeholder:text-[var(--color-body)]"
         />
 
         {/* SCHEDULE */}
         <button
           onClick={() => setShowScheduleModal(true)}
-          className="text-gray-500 hover:text-indigo-500 transition"
           title="Schedule message"
+          className="w-9 h-9 flex items-center justify-center rounded-full text-[var(--color-body)] hover:text-[var(--color-secondary)] hover:bg-[var(--color-surface)] transition-colors cursor-pointer"
         >
           <FiClock size={18} />
         </button>
@@ -136,10 +249,16 @@ const MessageInput = memo(({ selectedChat, onSendMessage, onSendFiles, onSchedul
         <button
           onClick={handleSend}
           disabled={!messageInput.trim()}
-          className={`p-2 rounded-full transition-all duration-200 ${messageInput.trim()
-              ? "bg-indigo-500 hover:bg-indigo-600 text-white shadow-md"
-              : "bg-gray-300 text-gray-400 cursor-not-allowed"
+          title="Send"
+          className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-200 ${messageInput.trim()
+            ? "shadow-md hover:scale-105 cursor-pointer"
+            : "bg-[var(--color-surface-muted)] text-[var(--color-body)] cursor-not-allowed"
             }`}
+          style={
+            messageInput.trim()
+              ? { background: "var(--bubble-sent-bg)", color: "var(--color-heading)" }
+              : undefined
+          }
         >
           <FiSend size={16} />
         </button>

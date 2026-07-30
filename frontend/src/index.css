@@ -1,29 +1,54 @@
 @import "tailwindcss";
 
 @theme {
-  /* === Bubbles === */
-  --bubble-sent-bg: #CFF7F1;        /* light teal/mint — your message bubble */
+  /* ==========================
+     Brand
+  ========================== */
+  --color-primary: #CFF7F1;          /* Main brand color */
+  --color-primary-hover: #BDF0E7;
+  --color-primary-active: #A8E8DC;
+
+  /* ==========================
+     Layout
+  ========================== */
+  --color-sidebar: #CFF7F1;
+  --color-topbar: #CFF7F1;
+  --color-input: #CFF7F1;
+  --color-chat-bg: #F8FAFC;
+
+  /* ==========================
+     Message Bubbles
+  ========================== */
+  --bubble-sent-bg: #CFF7F1;
   --bubble-sent-text: #0A1930;
-  --bubble-received-bg: #A78BFA;    /* purple — Sarah's message bubble */
+
+  --bubble-received-bg: #E9D5FF;
   --bubble-received-text: #0A1930;
 
-  /* === Brand === */
-                                     /* sent bubbles, send button, lock badge, links */
-  --color-primary-light: #E4F6F3;   /* encryption banner, input field bg, subtle teal fills */
+  /* ==========================
+     Surfaces
+  ========================== */
+  --color-surface: #FFFFFF;
+  --color-surface-muted: #F3F4F6;
+  --color-border: #E5E7EB;
 
-  --color-secondary: #7A4CDC;       /* accents, avatar ring, icons */
-  --color-secondary-light: #CBABFA; /* received message bubbles */
+  /* ==========================
+     Text
+  ========================== */
+  --color-heading: #0A1930;
+  --color-body: #6B7280;
+  --color-placeholder: #94A3B8;
 
-  /* === Text === */
-  --color-heading: #0A1930;         /* names, headings, primary text */
-  --color-body: #4B5563;            /* secondary/muted text, timestamps */
+  /* ==========================
+     Accent
+  ========================== */
+  --color-secondary: #7C3AED;
+  --color-secondary-light: #DDD6FE;
 
-  /* === Status === */
-  --color-success: #22C55E;         /* online indicator */
-  --color-warning: #FDAC2D;         /* alerts, "hidden/no one can see" style icons */
-
-  /* === Surfaces === */
-  --color-surface: #FFFFFF;         /* cards, header, composer bg */
-  --color-surface-tint: #F6F2FC;    /* chat window background */
-  --color-surface-muted: #F3F4F6;   /* dividers, disabled states */
+  /* ==========================
+     Status
+  ========================== */
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
 }

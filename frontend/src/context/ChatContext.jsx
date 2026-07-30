@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useContext } from "react";
+import { createContext, useState, useEffect, useContext, useRef } from "react";
 import api from "../api/api";
 import { AuthContext } from "./AuthContext";
 import { socket } from "../socket/socket";
@@ -12,16 +12,27 @@ export function ChatProvider({ children }) {
   const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [chatsLoading, setChatsLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+
+  // Always holds the latest selectedChat._id, readable inside stable socket listeners
+  const selectedChatRef = useRef(null);
+  useEffect(() => {
+    selectedChatRef.current = selectedChat?._id || null;
+  }, [selectedChat]);
 
   // Fetch chats when user logs in
   useEffect(() => {
     if (!user) return;
     const fetchChats = async () => {
+      setChatsLoading(true);
       try {
         const res = await api.get("/chats");
         setChatList(res.data);
       } catch (err) {
         console.error("Failed to fetch chats", err);
+      } finally {
+        setChatsLoading(false);  // ← always stop loading
       }
     };
     fetchChats();
@@ -43,31 +54,35 @@ export function ChatProvider({ children }) {
     });
 
     socket.on("user_last_seen", ({ userId, lastSeen }) => {
-      setChatList(prev => prev.map(chat => ({
-        ...chat,
-        users: chat.users.map(u =>
-          u._id === userId ? { ...u, lastSeen } : u
-        )
-      })));
+      setChatList((prev) =>
+        prev.map((chat) => ({
+          ...chat,
+          users: chat.users.map((u) =>
+            u._id === userId ? { ...u, lastSeen } : u
+          ),
+        }))
+      );
 
-      setSelectedChat(prev => {
+      setSelectedChat((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          users: prev.users.map(u =>
+          users: prev.users.map((u) =>
             u._id === userId ? { ...u, lastSeen } : u
-          )
+          ),
         };
       });
     });
 
     // Listen for messages_read event
     socket.on("messages_read", (chatId) => {
-      setMessages(prev => prev.map(msg =>
-        msg.chat === chatId && !msg.readBy.includes(user._id)
-          ? { ...msg, readBy: [...msg.readBy, user._id] }
-          : msg
-      ));
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.chat === chatId && !msg.readBy.includes(user._id)
+            ? { ...msg, readBy: [...msg.readBy, user._id] }
+            : msg
+        )
+      );
     });
 
     return () => {
@@ -82,39 +97,43 @@ export function ChatProvider({ children }) {
   // Fetch messages when selectedChat changes
   useEffect(() => {
     if (!selectedChat) return;
-
     const fetchMessages = async () => {
+      setMessagesLoading(true);
       try {
         const res = await api.get(`/messages/${selectedChat._id}`);
         setMessages(res.data);
-
-        // Mark messages as read
         await api.put(`/messages/read/${selectedChat._id}`);
-
-        // Notify sender via socket
         socket.emit("messages_read", selectedChat._id);
       } catch (err) {
         console.error("Failed to fetch messages", err);
+      } finally {
+        setMessagesLoading(false);  // ← always stop loading
       }
     };
-
     fetchMessages();
     socket.emit("join_chat", selectedChat._id);
   }, [selectedChat]);
 
   // Listen for real-time messages
-  // Listen for real-time messages
   useEffect(() => {
     socket.on("receive_message", (newMessage) => {
-      // Update messages array
-      setMessages((prev) => [...prev, newMessage]);
+      // Only append to the visible thread if it belongs to the chat
+      // that's currently open. Prevents messages from one chat
+      // bleeding into whatever chat happens to be open when the
+      // socket event arrives.
+      if (newMessage.chat === selectedChatRef.current) {
+        setMessages((prev) => [...prev, newMessage]);
+      }
 
-      // Update latestMessage in chatList ← ADD THIS
-      setChatList(prev => prev.map(chat =>
-        chat._id === newMessage.chat
-          ? { ...chat, latestMessage: newMessage }
-          : chat
-      ));
+      // Always update the chat list preview / latestMessage,
+      // regardless of which chat is currently open.
+      setChatList((prev) =>
+        prev.map((chat) =>
+          chat._id === newMessage.chat
+            ? { ...chat, latestMessage: newMessage }
+            : chat
+        )
+      );
     });
 
     return () => {
@@ -132,6 +151,8 @@ export function ChatProvider({ children }) {
         messages,
         setMessages,
         onlineUsers,
+        chatsLoading,
+        messagesLoading,
       }}
     >
       {children}

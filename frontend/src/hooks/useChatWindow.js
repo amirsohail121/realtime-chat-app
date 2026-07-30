@@ -17,6 +17,15 @@ const useChatWindow = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Always holds the latest selectedChat._id, readable inside stable socket listeners
+  const selectedChatRef = useRef(null);
+  useEffect(() => {
+    selectedChatRef.current = selectedChat?._id || null;
+    // Reset typing indicator when switching chats so a stale
+    // "typing..." from the previous chat doesn't linger
+    setIsTyping(false);
+  }, [selectedChat]);
+
   // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -24,8 +33,12 @@ const useChatWindow = () => {
 
   // Typing listener
   useEffect(() => {
-    socket.on("typing", () => setIsTyping(true));
-    socket.on("stop_typing", () => setIsTyping(false));
+    socket.on("typing", ({ chatId }) => {
+      if (chatId === selectedChatRef.current) setIsTyping(true);
+    });
+    socket.on("stop_typing", ({ chatId }) => {
+      if (chatId === selectedChatRef.current) setIsTyping(false);
+    });
     return () => {
       socket.off("typing");
       socket.off("stop_typing");

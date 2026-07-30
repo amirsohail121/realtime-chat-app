@@ -163,6 +163,14 @@ export const getPrivateKey = (userId) => {
 // Sidebar Preview Decryption
 // ─────────────────────────────────────────
 export const decryptPreview = (msg, currentUserId) => {
+  // If it's a file message, show a file preview (filename or type)
+  if (msg?.fileUrl) {
+    if (msg.fileName) return msg.fileName;
+    if (msg.fileType === "image") return "Image";
+    if (msg.fileType === "video") return "Video";
+    return "File";
+  }
+
   const privateKey = getPrivateKey(currentUserId);
   if (!privateKey || !msg?.content) return "No messages yet";
 

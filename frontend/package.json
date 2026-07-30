@@ -12,6 +12,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.6",
+    "emoji-picker-react": "^4.19.1",
     "framer-motion": "^12.42.2",
     "node-forge": "^1.4.0",
     "react": "^19.2.0",
