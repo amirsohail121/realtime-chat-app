@@ -12,7 +12,7 @@ import { ChatContext } from "../context/ChatContext";
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  const { chatsLoading } = useContext(ChatContext);
+  const { chatsLoading, unreadCounts } = useContext(ChatContext);
   const {
     user,
     logout,
@@ -237,18 +237,19 @@ const Sidebar = () => {
                 ? null
                 : chat.users.find(u => u._id !== user?._id);
               const isActive = selectedChat?._id === chat._id;
+              const unreadCount = unreadCounts?.[chat._id] || 0;
 
               return (
                 <div
                   key={index}
                   onClick={() => setSelectedChat(chat)}
-                  className={`p-3 rounded-xl cursor-pointer transition-all duration-200 border-l-4 flex items-center gap-3 ${isActive
-                    ? "bg-[var(--bubble-sent-bg)] border-[var(--color-heading)] shadow-sm"
-                    : "border-transparent hover:bg-[var(--color-surface-muted)] hover:border-[var(--bubble-sent-bg)] hover:shadow-sm hover:translate-x-0.5"
+                  className={`p-3 rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-3 ${isActive
+                    ? "bg-[var(--bubble-sent-bg)]"
+                    : "hover:bg-purple-100"
                     }`}
                 >
                   {/* AVATAR */}
-                  <div className={isActive ? "rounded-full ring-2 ring-[var(--color-heading)]/20" : ""}>
+                  <div>
                     <Avatar
                       src={chat.isGroupChat ? chat.groupPic : otherUser?.profilePic}
                       size={44}
@@ -258,9 +259,16 @@ const Sidebar = () => {
 
                   {/* NAME + LAST MESSAGE */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-[var(--color-heading)]">
-                      {getChatName(chat, user)}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-[var(--color-heading)] truncate">
+                        {getChatName(chat, user)}
+                      </p>
+                      {unreadCount > 0 && !isActive && (
+                        <span className="min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-semibold flex items-center justify-center">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs truncate text-[var(--color-body)]">
                       {chat.latestMessage
                         ? decryptPreview(chat.latestMessage, user?._id)

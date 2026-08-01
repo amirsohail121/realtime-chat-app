@@ -1,55 +1,83 @@
 import { useState, useEffect } from "react";
 import { decryptFile, decryptAesKey, getPrivateKey } from "../utils/crypto";
 
+const getMimeTypeFromFileName = (fileName = "") => {
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  const mimeMap = {
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    txt: "text/plain",
+    csv: "text/csv",
+    json: "application/json",
+    zip: "application/zip",
+  };
+
+  return mimeMap[ext] || "application/octet-stream";
+};
+
 
 export const useMessageBubble = (msg, user) => {
   const [decryptedFileUrl, setDecryptedFileUrl] = useState(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  useEffect(() => {
-    if (!msg.fileUrl) return;
+ useEffect(() => {
+   if (!msg.fileUrl) return;
 
-    let cancelled = false;
+   const decryptFileContent = async () => {
+     const privateKey = getPrivateKey(user?._id);
+     if (!privateKey) return;
 
-    const decryptFileContent = async () => {
-      const privateKey = getPrivateKey(user?._id);
-      if (!privateKey) return;
+     const isSender = msg.sender._id === user?._id;
 
-      const isSender = msg.sender._id === user?._id;
-      const encryptedAesKey = isSender
-        ? msg.encryptedAesKeyForSender
-        : msg.encryptedAesKey;
+     let encryptedAesKey;
 
-      if (!encryptedAesKey) return;
+     if (isSender) {
+       // Use sender's encrypted key
+       encryptedAesKey = msg.encryptedAesKeyForSender;
+     } else {
+       // Find THIS user's encrypted key from the array
+       const keyEntry = msg.encryptedAesKeys?.find(
+         (k) => k.userId === user?._id || k.userId?._id === user?._id,
+       );
+       encryptedAesKey = keyEntry?.key;
+     }
 
-      const aesKeyBytes = decryptAesKey(encryptedAesKey, privateKey);
-      if (!aesKeyBytes) return;
+     if (!encryptedAesKey) {
+       console.error("No encrypted AES key found for this user");
+       return;
+     }
 
-      const response = await fetch(msg.fileUrl);
-      const encryptedBuffer = await response.arrayBuffer();
+     // Decrypt AES key
+     const aesKeyBytes = decryptAesKey(encryptedAesKey, privateKey);
+     if (!aesKeyBytes) return;
 
-      const mimeType =
-        msg.fileType === "image"
-          ? "image/jpeg"
-          : msg.fileType === "video"
-            ? "video/mp4"
-            : "application/octet-stream";
+     // Fetch + decrypt file
+     const response = await fetch(msg.fileUrl);
+     const encryptedBuffer = await response.arrayBuffer();
 
-      const url = await decryptFile(
-        encryptedBuffer,
-        aesKeyBytes,
-        msg.iv,
-        mimeType,
-      );
-      if (!cancelled) setDecryptedFileUrl(url);
-    };
+     const mimeType =
+       msg.fileType === "image"
+         ? "image/jpeg"
+         : msg.fileType === "video"
+           ? "video/mp4"
+           : getMimeTypeFromFileName(msg.fileName);
 
-    decryptFileContent();
+     const url = await decryptFile(
+       encryptedBuffer,
+       aesKeyBytes,
+       msg.iv,
+       mimeType,
+     );
+     setDecryptedFileUrl(url);
+   };
 
-    return () => {
-      cancelled = true;
-    };
-  }, [msg, user]);
+   decryptFileContent();
+ }, [msg]);
 
   const isSender = msg.sender._id === user?._id;
 

@@ -172,12 +172,17 @@ export const decryptPreview = (msg, currentUserId) => {
   }
 
   const privateKey = getPrivateKey(currentUserId);
-  if (!privateKey || !msg?.content) return "No messages yet";
+  if (!privateKey) return "No messages yet";
 
   const isSender =
     msg.sender === currentUserId || msg.sender?._id === currentUserId;
 
-  const encrypted = isSender ? msg.contentForSender : msg.content;
+  const recipientEntry = msg.contentForUsers?.find(
+    (entry) => entry.userId === currentUserId || entry.userId?._id === currentUserId,
+  );
+  const encrypted = isSender
+    ? msg.contentForSender
+    : recipientEntry?.content || msg.content;
   if (!encrypted) return "Encrypted message";
 
   return decryptMessage(encrypted, privateKey);

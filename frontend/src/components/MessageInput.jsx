@@ -185,7 +185,15 @@ const MessageInput = memo(({ selectedChat, onSendMessage, onSendFiles, onSchedul
         </div>
       )}
 
-      <div className="relative flex items-center gap-2 bg-[var(--color-surface-tint)] rounded-full px-3 py-2 max-w-4xl mx-auto border border-transparent focus-within:border-[var(--color-secondary-light)] transition-colors">
+      <div
+        className="relative flex items-center gap-2 rounded-full px-3 py-2 max-w-4xl mx-auto border shadow-sm transition-all"
+        style={{
+          background: "var(--color-surface-tint)",
+          borderColor: "var(--color-surface-muted)",
+        }}
+        onFocus={(e) => (e.currentTarget.style.borderColor = "var(--color-secondary-light)")}
+        onBlur={(e) => (e.currentTarget.style.borderColor = "var(--color-surface-muted)")}
+      >
         {/* FILE ATTACH */}
         <button
           onClick={() => fileInputRef.current?.click()}

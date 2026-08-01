@@ -1,16 +1,22 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { ChatContext } from "../context/ChatContext";
 import { BsCheck2, BsCheck2All } from "react-icons/bs";
 import { IoPersonCircleOutline } from "react-icons/io5";
-import { FiClock, FiFileText, FiDownload, FiPlay } from "react-icons/fi";
+import { FiClock, FiFileText, FiPlay } from "react-icons/fi";
 import { useMessageBubble } from "../hooks/useMessages";
 import MediaViewer from "./MediaViewer";
+import api from "../api/api";
 
 // Pulls "PDF" / "DOCX" / "XLSX" etc. out of a filename for the file-card subtitle
 const getExtLabel = (fileName = "") => {
   const parts = fileName.split(".");
   return parts.length > 1 ? parts.pop().toUpperCase() : "FILE";
+};
+
+const getExt = (fileName = "") => {
+  const parts = fileName.split(".");
+  return parts.length > 1 ? parts.pop().toLowerCase() : "";
 };
 
 const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) => {
@@ -29,6 +35,51 @@ const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) =
   } = useMessageBubble(msg, user);
 
   const readStatus = getReadStatus();
+  const isMedia = msg.fileType === "image" || msg.fileType === "video";
+  const fileExt = getExt(msg.fileName);
+  const [isPreparingOpenLink, setIsPreparingOpenLink] = useState(false);
+
+  const handleFileCardClick = async () => {
+    if (!decryptedFileUrl) return;
+    if (isPreparingOpenLink) return;
+
+    const officeProtocols = {
+      doc: "ms-word:ofe|u|",
+      docx: "ms-word:ofe|u|",
+      ppt: "ms-powerpoint:ofe|u|",
+      pptx: "ms-powerpoint:ofe|u|",
+      xls: "ms-excel:ofe|u|",
+      xlsx: "ms-excel:ofe|u|",
+    };
+
+    const protocol = officeProtocols[fileExt];
+    if (protocol) {
+      try {
+        setIsPreparingOpenLink(true);
+        const fileResponse = await fetch(decryptedFileUrl);
+        const fileBlob = await fileResponse.blob();
+        const formData = new FormData();
+        formData.append("file", fileBlob, msg.fileName || `document.${fileExt}`);
+
+        const openRes = await api.post("/upload/open-link", formData);
+        const nativeOpenUrl = openRes.data.url;
+        const protocolUrl = `${protocol}${nativeOpenUrl}`;
+        window.location.href = protocolUrl;
+
+        // If the protocol handler is unavailable or blocked, at least open the HTTP URL.
+        setTimeout(() => {
+          window.open(nativeOpenUrl, "_blank", "noopener,noreferrer");
+        }, 350);
+      } catch (error) {
+        console.error("Failed to prepare native open link", error);
+      } finally {
+        setIsPreparingOpenLink(false);
+      }
+      return;
+    }
+
+    window.open(decryptedFileUrl, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className={`flex items-end gap-2 ${isLastInGroup ? "mb-3" : "mb-1"} ${isSender ? "justify-end" : "justify-start"}`}>
@@ -135,7 +186,7 @@ const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) =
               {msg.fileType === "file" && (
                 <div
                   className="flex items-center gap-3 w-64 max-w-full bg-white/10 hover:bg-white/[0.16] px-3 py-2.5 rounded-2xl cursor-pointer transition-colors"
-                  onClick={() => decryptedFileUrl && setViewerOpen(true)}
+                  onClick={handleFileCardClick}
                 >
                   <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center">
                     <FiFileText size={22} />
@@ -157,13 +208,10 @@ const MessageBubble = ({ msg, isFirstInGroup, isLastInGroup, decryptContent }) =
                     </p>
                   </div>
 
-                  {decryptedFileUrl && (
-                    <FiDownload size={17} className="flex-shrink-0 opacity-70" />
-                  )}
                 </div>
               )}
 
-              {viewerOpen && decryptedFileUrl && (
+              {isMedia && viewerOpen && decryptedFileUrl && (
                 <MediaViewer
                   url={decryptedFileUrl}
                   type={msg.fileType}

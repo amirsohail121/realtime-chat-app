@@ -4,7 +4,8 @@ import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
 
 const useSidebar = () => {
-  const { chatList, setChatList, setSelectedChat } = useContext(ChatContext);
+  const { chatList, setChatList, selectedChat, setSelectedChat } =
+    useContext(ChatContext);
   const { user, logout } = useContext(AuthContext);
 
   // ─── Search State ───
@@ -113,6 +114,7 @@ const useSidebar = () => {
     user,
     logout,
     chatList,
+    selectedChat,
     setSelectedChat,
     // Search
     searchOpen,

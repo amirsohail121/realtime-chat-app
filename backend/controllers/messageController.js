@@ -9,37 +9,45 @@ const sendMessage = async (req, res) => {
       chatId,
       content,
       contentForSender,
+      contentForUsers,
       fileUrl,
       fileType,
       fileName,
-      encryptedAesKey,
+     
+      encryptedAesKeys,
       encryptedAesKeyForSender,
       iv,
-      scheduledAt, // ← add this
+      scheduledAt,
     } = req.body;
 
-    if (!chatId || (!content && !fileUrl)) {
+    if (
+      !chatId ||
+      (!content &&
+        !(Array.isArray(contentForUsers) && contentForUsers.length > 0) &&
+        !fileUrl)
+    ) {
       return res
         .status(400)
         .json({ message: "chatId and content or file are required" });
     }
 
     const status = scheduledAt ? "scheduled" : "sent";
-
     let message = await Message.create({
       sender: req.user._id,
       content: content || "",
       contentForSender: contentForSender || "",
+      contentForUsers: contentForUsers || [],
       fileUrl: fileUrl || "",
       fileType: fileType || "",
       fileName: fileName || "",
-      encryptedAesKey: encryptedAesKey || "",
+      encryptedAesKeys: encryptedAesKeys || [], // ← array
       encryptedAesKeyForSender: encryptedAesKeyForSender || "",
       iv: iv || "",
       chat: chatId,
       status,
       scheduledAt: scheduledAt || null,
     });
+    
 
     // Only update latestMessage if NOT scheduled
     if (!scheduledAt) {

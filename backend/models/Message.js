@@ -17,6 +17,12 @@ const messageSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    contentForUsers: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        content: { type: String, default: "" },
+      },
+    ],
     //msg scheduling
     status: {
       type: String,
@@ -40,10 +46,16 @@ const messageSchema = new mongoose.Schema(
       type: String,
       default: "", // original filename
     },
-    encryptedAesKey: {
-      type: String,
-      default: "", // AES key encrypted with recipient's public key
-    },
+    // encryptedAesKey: {
+    //   type: String,
+    //   default: "", // AES key encrypted with recipient's public key
+    // },
+    encryptedAesKeys: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        key: { type: String, default: "" },
+      },
+    ],
     encryptedAesKeyForSender: {
       type: String,
       default: "", // AES key encrypted with sender's public key

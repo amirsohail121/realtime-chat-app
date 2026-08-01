@@ -59,8 +59,14 @@ const socketHandler = (io) => {
     });
 
     // Messages read
-    socket.on("messages_read", (chatId) => {
-      socket.to(chatId).emit("messages_read", chatId);
+    socket.on("messages_read", (payload) => {
+      const data =
+        typeof payload === "string"
+          ? { chatId: payload }
+          : payload || {};
+
+      if (!data.chatId) return;
+      socket.to(data.chatId).emit("messages_read", data);
     });
   });
 };

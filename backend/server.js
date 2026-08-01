@@ -62,6 +62,16 @@ app.use("/api/upload", uploadRoutes);
 // image upload — serve files publicly
 app.use("/uploads", express.static("uploads"));
 
+// Temporary decrypted files for opening in native apps.
+app.use(
+  "/open-files",
+  express.static("open-files", {
+    setHeaders: (res) => {
+      res.setHeader("Content-Disposition", "inline");
+    },
+  }),
+);
+
 // searchUsers
 app.use("/api/users", userRoutes);
 

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { FiX, FiDownload } from "react-icons/fi";
 
 const MediaViewer = ({ url, type, fileName, onClose }) => {
@@ -48,21 +47,6 @@ const MediaViewer = ({ url, type, fileName, onClose }) => {
         />
       )}
 
-      {/* File download */}
-      {type === "file" && (
-        <div className="bg-white rounded-lg p-8 text-center max-w-sm mx-auto">
-          <div className="text-6xl mb-4">📄</div>
-          <p className="text-gray-800 font-medium mb-2">{fileName}</p>
-<a
-          href={url}
-          download={fileName}
-          className="inline-block bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-600"
-            >
-          Download File
-        </a>
-          </div>
-  )
-}
       </div >
     </div >
   );
