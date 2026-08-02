@@ -1,19 +1,29 @@
+import { useContext } from "react";
 import useTopBar from "../hooks/useTopBar";
-import { CiSearch } from "react-icons/ci";
 import { HiDotsVertical } from "react-icons/hi";
 import { HiUserGroup } from "react-icons/hi2";
+import { IoArrowBack } from "react-icons/io5";
+import { ChatContext } from "../context/ChatContext";
 
 const TopBar = () => {
   const { chatName, chatAvatar, getStatus, isOnline, selectedChat } = useTopBar();
+  const { setSelectedChat } = useContext(ChatContext); // swap to your real setter if named differently
 
   return (
     <div
-      className="h-16 flex items-center justify-between px-5 shadow-sm sticky top-0 z-10 border-b border-black/5"
+      className="h-16 flex items-center justify-between px-4 md:px-5 shadow-sm sticky top-0 z-10 border-b border-black/5"
       style={{ background: "var(--bubble-sent-bg)" }}
     >
-      {/* Left Section */}
-      <div className="flex items-center gap-3 min-w-0">
-        {/* Avatar */}
+      <div className="flex items-center gap-2 md:gap-3 min-w-0">
+        {/* BACK BUTTON — mobile only, returns to the chat list */}
+        <button
+          onClick={() => setSelectedChat(null)}
+          aria-label="Back to chats"
+          className="md:hidden shrink-0 w-9 h-9 -ml-1 flex items-center justify-center rounded-full text-[var(--color-heading)] hover:bg-black/5 transition-colors"
+        >
+          <IoArrowBack size={20} />
+        </button>
+
         <div className="relative shrink-0">
           {chatAvatar ? (
             <img
@@ -38,7 +48,6 @@ const TopBar = () => {
           )}
         </div>
 
-        {/* Chat Info */}
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-[var(--color-heading)] truncate">
             {chatName}
@@ -51,8 +60,6 @@ const TopBar = () => {
           </p>
         </div>
       </div>
-
-      
     </div>
   );
 };
