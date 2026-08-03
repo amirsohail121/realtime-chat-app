@@ -31,8 +31,6 @@ app.use(
   }),
 );
 
-
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -74,7 +72,6 @@ app.use("/api/users", userRoutes);
 
 const PORT = process.env.PORT || 3000;
 
-
 async function startServer() {
   try {
     await connectedDB();
@@ -93,8 +90,6 @@ async function startServer() {
 
 startServer();
 
-server.listen(PORT, (err) => {
-  console.log(`Server is running on port ${PORT}`);
-});
+
 
 
