@@ -7,36 +7,38 @@ const generateToken = require("../utils/generateToken");
 
 
 // send otp
-const nodemailer = require("nodemailer");
-
-const sendEmail = async (to, subject, html) => {
+const sendOtp = async (req, res) => {
   try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+  
+      const { email } = req.body; 
 
-    await transporter.verify();
-    console.log("SMTP connection verified");
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
 
-    await transporter.sendMail({
-      from: `"ChatApp" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    });
+      await Otp.deleteMany({ email }); 
 
-    console.log("Email sent successfully");
-  } catch (err) {
-    console.error("Nodemailer Error:", err);
-    throw err;
-  }
+      const otp = generateOtp(); 
+
+      const hashedOtp = await bcrypt.hash(otp, 10); 
+
+      await Otp.create({
+        email,
+        otp: hashedOtp,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      });
+
+      await sendEmail( 
+        email,
+        "Your ChatApp OTP",
+        `<h2>Your OTP is: ${otp}</h2><p>Expires in 10 minutes.</p>`,
+      );
+
+      res.status(200).json({ message: "OTP sent successfully" }); 
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
 };
-
-module.exports = sendEmail;
 
   
 // verify the otp
