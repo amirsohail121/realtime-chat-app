@@ -18,7 +18,7 @@ const server = http.createServer(app);
 //Created Socket.io instance with CORS
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+   origin: process.env.CLIENT_URL,
     credentials: true,
   },
 });
@@ -26,7 +26,7 @@ const io = new Server(server, {
 // frontend connectivity
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.CLIENT_URL,
     credentials: true,
   }),
 );
@@ -78,7 +78,7 @@ app.use("/api/users", userRoutes);
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, (err) => {
-  console.log(`Server is running on address http://localhost:${PORT}`);
+ console.log(`Server is running on port ${PORT}`);
 });
 
 
