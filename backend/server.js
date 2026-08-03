@@ -18,7 +18,7 @@ const server = http.createServer(app);
 //Created Socket.io instance with CORS
 const io = new Server(server, {
   cors: {
-   origin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL,
     credentials: true,
   },
 });
@@ -31,16 +31,13 @@ app.use(
   }),
 );
 
-connectedDB();
-socketHandler(io);
-startScheduler(io);
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const cookieParser = require("cookie-parser");
 app.use(cookieParser());
-
 
 app.get("/", (req, res) => {
   res.send("setup is completed");
@@ -77,8 +74,27 @@ app.use("/api/users", userRoutes);
 
 const PORT = process.env.PORT || 3000;
 
+
+async function startServer() {
+  try {
+    await connectedDB();
+
+    socketHandler(io);
+    startScheduler(io);
+
+    server.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("Failed to start server:", err);
+    process.exit(1);
+  }
+}
+
+startServer();
+
 server.listen(PORT, (err) => {
- console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
 
 
