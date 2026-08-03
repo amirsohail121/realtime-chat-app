@@ -4,8 +4,10 @@ const cloudinary = require("../config/cloudinary");
 
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: {
+  params: async (req, file) => ({
     folder: "chatwave/profile-pictures",
+    resource_type: "image",
+    format: "jpg",
     transformation: [
       {
         width: 400,
@@ -15,9 +17,8 @@ const storage = new CloudinaryStorage({
         fetch_format: "auto",
       },
     ],
-  },
+  }),
 });
-
 const upload = multer({ storage });
 
 module.exports = upload;

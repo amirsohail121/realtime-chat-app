@@ -4,6 +4,7 @@ import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
 import { generateKeyPair, savePrivateKey, getPrivateKey } from "../utils/crypto";
 import { FiCamera, FiUser, FiMail, FiEdit3, FiAlertCircle, FiLoader } from "react-icons/fi";
+import imageCompression from "browser-image-compression";
 
 export default function SetupProfile() {
   const navigate = useNavigate();
@@ -27,22 +28,62 @@ export default function SetupProfile() {
 
     setPreview(URL.createObjectURL(file));
     setUploading(true);
+    setError("");
 
     try {
-      const compressedFile = await imageCompression(file, {
+      console.log("📷 Original File:", {
+        name: file.name,
+        type: file.type,
+        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+      });
+
+      // Compress image
+      const compressedBlob = await imageCompression(file, {
         maxSizeMB: 0.3,
         maxWidthOrHeight: 512,
         useWebWorker: true,
+        initialQuality: 0.8,
+      });
+
+      // Convert Blob back to File
+      const uploadFile = new File(
+        [compressedBlob],
+        file.name,
+        {
+          type: compressedBlob.type || file.type,
+          lastModified: Date.now(),
+        }
+      );
+
+      console.log("🗜️ Compressed File:", {
+        name: uploadFile.name,
+        type: uploadFile.type,
+        size: `${(uploadFile.size / 1024 / 1024).toFixed(2)} MB`,
       });
 
       const formData = new FormData();
-      formData.append("image", compressedFile);
+      formData.append("image", uploadFile);
 
-      const res = await api.post("/upload", formData);
+      console.time("Image Upload");
+
+      const res = await api.post("/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      console.timeEnd("Image Upload");
+
+      console.log("✅ Upload Response:", res.data);
 
       setProfilePic(res.data.url);
     } catch (err) {
-      setError(err.response?.data?.message || "Image upload failed");
+      console.error("❌ Upload Error:", err.response?.data || err);
+
+      setError(
+        err.response?.data?.message ||
+        "Image upload failed. Please try another image."
+      );
     } finally {
       setUploading(false);
     }
