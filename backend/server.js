@@ -31,6 +31,7 @@ app.use(
   }),
 );
 
+connectedDB();
 socketHandler(io);
 startScheduler(io);
 
@@ -40,7 +41,6 @@ app.use(express.urlencoded({ extended: true }));
 const cookieParser = require("cookie-parser");
 app.use(cookieParser());
 
-connectedDB();
 
 app.get("/", (req, res) => {
   res.send("setup is completed");
