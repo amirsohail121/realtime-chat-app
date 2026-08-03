@@ -1,15 +1,17 @@
 const fs = require("fs");
-const path = require("path");
 
 const OPEN_FILE_TTL_MS = 10 * 60 * 1000;
 
 const uploadImage = (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ message: "No file uploaded" });
+    return res.status(400).json({
+      message: "No file uploaded",
+    });
   }
 
-  const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-  res.status(200).json({ url: fileUrl });
+  return res.status(200).json({
+    url: req.file.path,
+  });
 };
 
 const createOpenFileLink = (req, res) => {
@@ -20,7 +22,6 @@ const createOpenFileLink = (req, res) => {
   const fileUrl = `${req.protocol}://${req.get("host")}/open-files/${req.file.filename}`;
   const filePath = req.file.path;
 
-  // Best-effort cleanup of temporary decrypted file after a short TTL.
   setTimeout(() => {
     fs.unlink(filePath, (err) => {
       if (err && err.code !== "ENOENT") {
@@ -35,4 +36,7 @@ const createOpenFileLink = (req, res) => {
   });
 };
 
-module.exports = { uploadImage, createOpenFileLink };
+module.exports = {
+  uploadImage,
+  createOpenFileLink,
+};
