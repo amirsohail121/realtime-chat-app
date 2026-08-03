@@ -7,7 +7,23 @@ const upload = require("../middleware/upload");
 const { uploadImage, createOpenFileLink } = require("../controllers/uploadController");
 const { protect } = require("../middleware/authMiddleware");
 
-router.post("/", protect, upload.single("image"), uploadImage);
+router.post(
+  "/",
+  protect,
+  (req, res, next) => {
+    upload.single("image")(req, res, (err) => {
+      if (err) {
+        console.error("UPLOAD ERROR:", err);
+        return res.status(500).json({
+          message: err.message,
+          stack: err.stack,
+        });
+      }
+      next();
+    });
+  },
+  uploadImage,
+);
 
 const openFilesDir = path.join(process.cwd(), "open-files");
 if (!fs.existsSync(openFilesDir)) {

@@ -11,7 +11,7 @@ const uploadImage = (req, res) => {
     });
   }
 
-  return res.status(200).json({
+  res.json({
     url: req.file.path,
   });
 };
