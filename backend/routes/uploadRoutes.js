@@ -13,7 +13,9 @@ router.post(
   (req, res, next) => {
     upload.single("image")(req, res, (err) => {
       if (err) {
-        console.error("UPLOAD ERROR:", err);
+        console.error("========== UPLOAD ERROR ==========");
+        console.dir(err, { depth: null });
+        console.error(err);
         return res.status(500).json({
           message: err.message,
           stack: err.stack,
