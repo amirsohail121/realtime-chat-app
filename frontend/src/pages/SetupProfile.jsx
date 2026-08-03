@@ -24,16 +24,25 @@ export default function SetupProfile() {
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
     setPreview(URL.createObjectURL(file));
     setUploading(true);
 
-    const formData = new FormData();
-    formData.append("image", file);
     try {
+      const compressedFile = await imageCompression(file, {
+        maxSizeMB: 0.3,
+        maxWidthOrHeight: 512,
+        useWebWorker: true,
+      });
+
+      const formData = new FormData();
+      formData.append("image", compressedFile);
+
       const res = await api.post("/upload", formData);
+
       setProfilePic(res.data.url);
     } catch (err) {
-      setError("Image upload failed");
+      setError(err.response?.data?.message || "Image upload failed");
     } finally {
       setUploading(false);
     }

@@ -6,8 +6,15 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: "chatwave/profile-pictures",
-    allowed_formats: ["jpg", "jpeg", "png", "webp"],
-    resource_type: "image",
+    transformation: [
+      {
+        width: 400,
+        height: 400,
+        crop: "fill",
+        quality: "auto",
+        fetch_format: "auto",
+      },
+    ],
   },
 });
 
