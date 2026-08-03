@@ -3,6 +3,8 @@ const fs = require("fs");
 const OPEN_FILE_TTL_MS = 10 * 60 * 1000;
 
 const uploadImage = (req, res) => {
+  console.log("REQ.FILE:", req.file);
+
   if (!req.file) {
     return res.status(400).json({
       message: "No file uploaded",
