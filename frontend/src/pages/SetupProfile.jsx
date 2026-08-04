@@ -14,6 +14,7 @@ export default function SetupProfile() {
   const [name, setName] = useState(user?.name || "");
   const [bio, setBio] = useState(user?.bio || "");
   const [profilePic, setProfilePic] = useState(user?.profilePic || "");
+  const [profilePicId, setProfilePicId] = useState(user?.profilePicId || "");
   const [preview, setPreview] = useState(user?.profilePic || null);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -31,13 +32,6 @@ export default function SetupProfile() {
     setError("");
 
     try {
-      console.log("📷 Original File:", {
-        name: file.name,
-        type: file.type,
-        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-      });
-
-      // Compress image
       const compressedBlob = await imageCompression(file, {
         maxSizeMB: 0.3,
         maxWidthOrHeight: 512,
@@ -45,7 +39,6 @@ export default function SetupProfile() {
         initialQuality: 0.8,
       });
 
-      // Convert Blob back to File
       const uploadFile = new File(
         [compressedBlob],
         file.name,
@@ -55,16 +48,8 @@ export default function SetupProfile() {
         }
       );
 
-      console.log("🗜️ Compressed File:", {
-        name: uploadFile.name,
-        type: uploadFile.type,
-        size: `${(uploadFile.size / 1024 / 1024).toFixed(2)} MB`,
-      });
-
       const formData = new FormData();
       formData.append("image", uploadFile);
-
-      console.time("Image Upload");
 
       const res = await api.post("/upload", formData, {
         headers: {
@@ -72,11 +57,8 @@ export default function SetupProfile() {
         },
       });
 
-      console.timeEnd("Image Upload");
-
-      console.log("✅ Upload Response:", res.data);
-
       setProfilePic(res.data.url);
+      setProfilePicId(res.data.public_id);
     } catch (err) {
       console.error("❌ Upload Error:", err.response?.data || err);
 

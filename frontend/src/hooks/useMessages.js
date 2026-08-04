@@ -20,64 +20,60 @@ const getMimeTypeFromFileName = (fileName = "") => {
   return mimeMap[ext] || "application/octet-stream";
 };
 
-
 export const useMessageBubble = (msg, user) => {
   const [decryptedFileUrl, setDecryptedFileUrl] = useState(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
- useEffect(() => {
-   if (!msg.fileUrl) return;
+  useEffect(() => {
+    if (!msg.fileUrl) return;
+    if (decryptedFileUrl) return; // already decrypted — don't redo the work
 
-   const decryptFileContent = async () => {
-     const privateKey = getPrivateKey(user?._id);
-     if (!privateKey) return;
+    const decryptFileContent = async () => {
+      const privateKey = getPrivateKey(user?._id);
+      if (!privateKey) return;
 
-     const isSender = msg.sender._id === user?._id;
+      const isSender = msg.sender._id === user?._id;
 
-     let encryptedAesKey;
+      let encryptedAesKey;
 
-     if (isSender) {
-       // Use sender's encrypted key
-       encryptedAesKey = msg.encryptedAesKeyForSender;
-     } else {
-       // Find THIS user's encrypted key from the array
-       const keyEntry = msg.encryptedAesKeys?.find(
-         (k) => k.userId === user?._id || k.userId?._id === user?._id,
-       );
-       encryptedAesKey = keyEntry?.key;
-     }
+      if (isSender) {
+        encryptedAesKey = msg.encryptedAesKeyForSender;
+      } else {
+        const keyEntry = msg.encryptedAesKeys?.find(
+          (k) => k.userId === user?._id || k.userId?._id === user?._id,
+        );
+        encryptedAesKey = keyEntry?.key;
+      }
 
-     if (!encryptedAesKey) {
-       console.error("No encrypted AES key found for this user");
-       return;
-     }
+      if (!encryptedAesKey) {
+        console.error("No encrypted AES key found for this user");
+        return;
+      }
 
-     // Decrypt AES key
-     const aesKeyBytes = decryptAesKey(encryptedAesKey, privateKey);
-     if (!aesKeyBytes) return;
+      const aesKeyBytes = decryptAesKey(encryptedAesKey, privateKey);
+      if (!aesKeyBytes) return;
 
-     // Fetch + decrypt file
-     const response = await fetch(msg.fileUrl);
-     const encryptedBuffer = await response.arrayBuffer();
+      const response = await fetch(msg.fileUrl);
+      const encryptedBuffer = await response.arrayBuffer();
 
-     const mimeType =
-       msg.fileType === "image"
-         ? "image/jpeg"
-         : msg.fileType === "video"
-           ? "video/mp4"
-           : getMimeTypeFromFileName(msg.fileName);
+      const mimeType =
+        msg.fileType === "image"
+          ? "image/jpeg"
+          : msg.fileType === "video"
+            ? "video/mp4"
+            : getMimeTypeFromFileName(msg.fileName);
 
-     const url = await decryptFile(
-       encryptedBuffer,
-       aesKeyBytes,
-       msg.iv,
-       mimeType,
-     );
-     setDecryptedFileUrl(url);
-   };
+      const url = await decryptFile(
+        encryptedBuffer,
+        aesKeyBytes,
+        msg.iv,
+        mimeType,
+      );
+      setDecryptedFileUrl(url);
+    };
 
-   decryptFileContent();
- }, [msg]);
+    decryptFileContent();
+  }, [msg.fileUrl]); // ← only re-run when the actual file changes, not on every parent re-render
 
   const isSender = msg.sender._id === user?._id;
 

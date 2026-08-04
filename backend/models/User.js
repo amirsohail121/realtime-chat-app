@@ -22,6 +22,10 @@ const userSchema = mongoose.Schema(
       type: String,
       default: "",
     },
+    profilePicId: {
+      type: String,
+      default: "",
+    },
     bio: {
       type: String,
       default: "Hey there! I am using ChatApp.",

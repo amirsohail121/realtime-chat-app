@@ -12,7 +12,8 @@ import {
 } from "../utils/crypto";
 
 const useChatWindow = () => {
-  const { selectedChat, messages, setMessages, setChatList } = useContext(ChatContext);
+  const { selectedChat, messages, setMessages, setChatList } =
+    useContext(ChatContext);
   const { user } = useContext(AuthContext);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
@@ -73,7 +74,8 @@ const useChatWindow = () => {
       encryptedContent = msg.contentForSender;
     } else {
       const recipientEntry = msg.contentForUsers?.find(
-        (entry) => entry.userId === user?._id || entry.userId?._id === user?._id,
+        (entry) =>
+          entry.userId === user?._id || entry.userId?._id === user?._id,
       );
       encryptedContent = recipientEntry?.content || msg.content;
     }
@@ -91,7 +93,7 @@ const useChatWindow = () => {
   }, [messages]);
 
   // Send text
- 
+
   const handleSendMessage = async (content) => {
     try {
       const otherUsers = selectedChat.users.filter((u) => u._id !== user?._id);
@@ -118,7 +120,7 @@ const useChatWindow = () => {
       setMessages((prev) =>
         prev.some((msg) => msg._id === res.data._id)
           ? prev
-          : [...prev, res.data]
+          : [...prev, res.data],
       );
       moveChatToTop(res.data);
       socket.emit("send_message", { chatId: selectedChat._id, ...res.data });
@@ -128,64 +130,65 @@ const useChatWindow = () => {
   };
 
   // Send files
- const handleSendFiles = async (files) => {
-   try {
-     for (const file of files) {
-       const { encryptedBytes, aesKey, iv } = await encryptFile(file);
-       const encryptedBlob = new Blob([encryptedBytes]);
-       const formData = new FormData();
-       formData.append("image", encryptedBlob, file.name + ".enc");
+  // Send files
+  const handleSendFiles = async (files) => {
+    try {
+      for (const file of files) {
+        const { encryptedBytes, aesKey, iv } = await encryptFile(file);
+        const encryptedBlob = new Blob([encryptedBytes]);
+        const formData = new FormData();
+        formData.append("file", encryptedBlob, file.name + ".enc");
 
-       const uploadRes = await api.post("/upload", formData);
-       const fileUrl = uploadRes.data.url;
+        const uploadRes = await api.post("/upload/chat-file", formData);
+        const fileUrl = uploadRes.data.url;
 
-       // Encrypt AES key for EACH member in the chat
-       const encryptedAesKeys = selectedChat.users
-         .filter((u) => u._id !== user?._id) // exclude sender
-         .map((member) => ({
-           userId: member._id,
-           key: encryptAesKey(aesKey, member.publicKey),
-         }));
+        // Encrypt AES key for EACH member in the chat
+        const encryptedAesKeys = selectedChat.users
+          .filter((u) => u._id !== user?._id) // exclude sender
+          .map((member) => ({
+            userId: member._id,
+            key: encryptAesKey(aesKey, member.publicKey),
+          }));
 
-       // Encrypt for sender too
-       const encryptedAesKeyForSender = user?.publicKey
-         ? encryptAesKey(aesKey, user.publicKey)
-         : "";
+        // Encrypt for sender too
+        const encryptedAesKeyForSender = user?.publicKey
+          ? encryptAesKey(aesKey, user.publicKey)
+          : "";
 
-       const fileType = file.type.startsWith("image/")
-         ? "image"
-         : file.type.startsWith("video/")
-           ? "video"
-           : "file";
+        const fileType = file.type.startsWith("image/")
+          ? "image"
+          : file.type.startsWith("video/")
+            ? "video"
+            : "file";
 
-       const res = await api.post("/messages", {
-         chatId: selectedChat._id,
-         content: "",
-         contentForSender: "",
-         fileUrl,
-         fileType,
-         fileName: file.name,
-         encryptedAesKeys, // ← array for all members
-         encryptedAesKeyForSender, // ← for sender
-         iv,
-       });
+        const res = await api.post("/messages", {
+          chatId: selectedChat._id,
+          content: "",
+          contentForSender: "",
+          fileUrl,
+          fileType,
+          fileName: file.name,
+          encryptedAesKeys, // ← array for all members
+          encryptedAesKeyForSender, // ← for sender
+          iv,
+        });
 
-       setMessages((prev) =>
-         prev.some((msg) => msg._id === res.data._id)
-           ? prev
-           : [...prev, res.data]
-       );
-       moveChatToTop(res.data);
+        setMessages((prev) =>
+          prev.some((msg) => msg._id === res.data._id)
+            ? prev
+            : [...prev, res.data],
+        );
+        moveChatToTop(res.data);
 
-       socket.emit("send_message", {
-         chatId: selectedChat._id,
-         ...res.data,
-       });
-     }
-   } catch (err) {
-     console.error("Failed to send files", err);
-   }
- };
+        socket.emit("send_message", {
+          chatId: selectedChat._id,
+          ...res.data,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to send files", err);
+    }
+  };
 
   // Schedule message
   const handleSchedule = async (content, scheduledAt) => {
@@ -221,6 +224,6 @@ const useChatWindow = () => {
     handleSendFiles,
     handleSchedule,
   };
-};;
+};;;
 
 export default useChatWindow;
