@@ -1,0 +1,308 @@
+import forge from "node-forge";
+
+// RSA key generation
+export const generateKeyPair = () => {
+  const keypair = forge.pki.rsa.generateKeyPair({ bits: 2048 });
+
+  return {
+    publicKey: forge.pki.publicKeyToPem(keypair.publicKey),
+    privateKey: forge.pki.privateKeyToPem(keypair.privateKey),
+  };
+};
+
+// Text encryption
+export const encryptMessage = (message, publicKeyPem) => {
+  if (!message?.trim() || !publicKeyPem) {
+    throw new Error("Message and public key are required");
+  }
+
+  const aesKey = forge.random.getBytesSync(32);
+  const iv = forge.random.getBytesSync(16);
+
+  const cipher = forge.cipher.createCipher("AES-CBC", aesKey);
+  cipher.start({ iv });
+  cipher.update(forge.util.createBuffer(message, "utf8"));
+  cipher.finish();
+
+  const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+
+  const payload = {
+    encryptedMessage: forge.util.encode64(cipher.output.getBytes()),
+    encryptedAesKey: forge.util.encode64(
+      publicKey.encrypt(aesKey, "RSA-OAEP"),
+    ),
+    iv: forge.util.encode64(iv),
+  };
+
+  return forge.util.encode64(JSON.stringify(payload));
+};
+
+export const decryptMessage = (encryptedContent, privateKeyPem) => {
+  try {
+    if (!encryptedContent || !privateKeyPem) return null;
+
+    const payload = JSON.parse(
+      forge.util.decode64(encryptedContent),
+    );
+
+    const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+    const aesKey = privateKey.decrypt(
+      forge.util.decode64(payload.encryptedAesKey),
+      "RSA-OAEP",
+    );
+
+    const decipher = forge.cipher.createDecipher("AES-CBC", aesKey);
+    decipher.start({
+      iv: forge.util.decode64(payload.iv),
+    });
+    decipher.update(
+      forge.util.createBuffer(
+        forge.util.decode64(payload.encryptedMessage),
+      ),
+    );
+
+    if (!decipher.finish()) return null;
+
+    return decipher.output.toString("utf8");
+  } catch (err) {
+    console.error("Decryption error:", err.message);
+    return null;
+  }
+};
+
+// File encryption
+export const encryptFile = async (file) => {
+  if (!file) throw new Error("File is required");
+
+  const aesKey = await window.crypto.subtle.generateKey(
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"],
+  );
+
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const fileBuffer = await file.arrayBuffer();
+
+  const encryptedBuffer = await window.crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    aesKey,
+    fileBuffer,
+  );
+
+  const rawAesKey = await window.crypto.subtle.exportKey("raw", aesKey);
+
+  return {
+    encryptedBytes: new Uint8Array(encryptedBuffer),
+    aesKey: new Uint8Array(rawAesKey),
+    iv: Array.from(iv).join(","),
+  };
+};
+
+export const decryptFile = async (
+  encryptedData,
+  aesKeyBytes,
+  ivString,
+  mimeType = "application/octet-stream",
+) => {
+  try {
+    const aesKey = await window.crypto.subtle.importKey(
+      "raw",
+      aesKeyBytes,
+      { name: "AES-GCM" },
+      false,
+      ["decrypt"],
+    );
+
+    const iv = new Uint8Array(
+      ivString.split(",").map(Number),
+    );
+
+    const decryptedBuffer = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      aesKey,
+      encryptedData,
+    );
+
+    return URL.createObjectURL(
+      new Blob([decryptedBuffer], { type: mimeType }),
+    );
+  } catch (err) {
+    console.error("File decryption error:", err.message);
+    return null;
+  }
+};
+
+// AES key encryption/decryption
+export const encryptAesKey = (aesKeyBytes, publicKeyPem) => {
+  if (!aesKeyBytes || !publicKeyPem) {
+    throw new Error("AES key and public key are required");
+  }
+
+  const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+  const aesKeyString = String.fromCharCode(...aesKeyBytes);
+  const encrypted = publicKey.encrypt(aesKeyString, "RSA-OAEP");
+
+  return forge.util.encode64(encrypted);
+};
+
+export const decryptAesKey = (encryptedAesKey, privateKeyPem) => {
+  try {
+    if (!encryptedAesKey || !privateKeyPem) return null;
+
+    const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+    const decrypted = privateKey.decrypt(
+      forge.util.decode64(encryptedAesKey),
+      "RSA-OAEP",
+    );
+
+    const bytes = new Uint8Array(decrypted.length);
+
+    for (let index = 0; index < decrypted.length; index += 1) {
+      bytes[index] = decrypted.charCodeAt(index);
+    }
+
+    return bytes;
+  } catch (err) {
+    console.error("AES key decryption error:", err.message);
+    return null;
+  }
+};
+
+// Persistent per-user key storage
+export const savePrivateKey = (privateKey, userId) => {
+  if (!privateKey || !userId) return;
+  localStorage.setItem(`privateKey_${userId}`, privateKey);
+};
+
+export const savePublicKey = (publicKey, userId) => {
+  if (!publicKey || !userId) return;
+  localStorage.setItem(`publicKey_${userId}`, publicKey);
+};
+
+export const getPrivateKey = (userId) => {
+  if (!userId) return null;
+  return localStorage.getItem(`privateKey_${userId}`);
+};
+
+export const getPublicKey = (userId) => {
+  if (!userId) return null;
+  return localStorage.getItem(`publicKey_${userId}`);
+};
+
+export const getOrCreateIdentity = (userId) => {
+  if (!userId) throw new Error("User ID is required");
+
+  const privateKey = getPrivateKey(userId);
+  const publicKey = getPublicKey(userId);
+
+  if (privateKey && publicKey) {
+    // Preserve the current key in history.
+    saveKeyVersion(userId, publicKey, privateKey);
+
+    return { privateKey, publicKey };
+  }
+
+  if (privateKey || publicKey) {
+    throw new Error("Incomplete encryption key pair");
+  }
+
+  const identity = generateKeyPair();
+
+  savePrivateKey(identity.privateKey, userId);
+  savePublicKey(identity.publicKey, userId);
+  saveKeyVersion(
+    userId,
+    identity.publicKey,
+    identity.privateKey,
+  );
+
+  return identity;
+};
+
+// Sidebar preview decryption
+export const decryptPreview = (msg, currentUserId) => {
+  if (msg?.fileUrl) {
+    if (msg.fileName) return msg.fileName;
+    if (msg.fileType === "image") return "Image";
+    if (msg.fileType === "video") return "Video";
+    return "File";
+  }
+
+  const senderId = String(msg.sender?._id || msg.sender);
+  const userId = String(currentUserId);
+  const isSender = senderId === userId;
+
+  const recipientEntry = msg.contentForUsers?.find(
+    (entry) =>
+      String(entry.userId?._id || entry.userId) === userId,
+  );
+
+  const encryptedContent = isSender
+    ? msg.contentForSender || msg.content
+    : recipientEntry?.content || msg.content;
+
+  if (!encryptedContent) return "Encrypted message";
+
+  return (
+    decryptWithKeyHistory(encryptedContent, currentUserId) ||
+    "Encrypted message"
+  );
+};
+
+export const saveKeyVersion = (userId, publicKey, privateKey) => {
+  if (!userId || !publicKey || !privateKey) return;
+
+  const history = getKeyHistory(userId);
+
+  if (!history.some((key) => key.publicKey === publicKey)) {
+    history.push({
+      publicKey,
+      privateKey,
+      createdAt: Date.now(),
+    });
+
+    localStorage.setItem(
+      `keyHistory_${userId}`,
+      JSON.stringify(history),
+    );
+  }
+};
+
+export const getKeyHistory = (userId) => {
+  try {
+    return JSON.parse(
+      localStorage.getItem(`keyHistory_${userId}`) || "[]",
+    );
+  } catch {
+    return [];
+  }
+};
+
+export const decryptWithKeyHistory = (encryptedContent, userId) => {
+  if (!encryptedContent || !userId) return null;
+
+  const currentPrivateKey = getPrivateKey(userId);
+  const history = getKeyHistory(userId);
+
+  const privateKeys = [
+    currentPrivateKey,
+    ...history.map((key) => key.privateKey),
+  ].filter(Boolean);
+
+  const uniqueKeys = [...new Set(privateKeys)];
+
+  for (const privateKey of uniqueKeys) {
+    try {
+      const decrypted = decryptMessage(
+        encryptedContent,
+        privateKey,
+      );
+
+      if (decrypted !== null) return decrypted;
+    } catch {
+      // Try the next historical key.
+    }
+  }
+
+  return null;
+};

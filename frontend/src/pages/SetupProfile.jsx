@@ -264,7 +264,7 @@ export default function SetupProfile() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full text-white font-semibold py-3 rounded-xl transition-transform disabled:opacity-70 disabled:hover:scale-100 hover:scale-[1.02] flex items-center justify-center gap-2 shadow-md"
+          className="w-full text-white font-semibold py-3 rounded-xl cursor-pointer disabled:cursor-not-allowed transition-transform disabled:opacity-70 disabled:hover:scale-100 hover:scale-[1.02] flex items-center justify-center gap-2 shadow-md"
           style={{
             background:
               "linear-gradient(135deg, var(--color-secondary) 0%, #5b3aa8 100%)",
