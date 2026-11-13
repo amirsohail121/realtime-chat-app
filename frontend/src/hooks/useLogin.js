@@ -5,7 +5,7 @@ import api from "../api/api";
 
 export const OTP_LENGTH = 6;
 
-export const useLogin = () => {
+export const useLogin = ({ signup = false } = {}) => {
   const { login, user } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -37,6 +37,17 @@ export const useLogin = () => {
 
     setSubmitting(true);
     try {
+      const existingUser = await api.get("/auth/check-email", {
+        params: { email: email.trim() },
+      });
+      if (signup && existingUser.data.exists) {
+          setError("This email is already registered. Sign in instead.");
+          return;
+      }
+      if (!signup && !existingUser.data.exists) {
+        setError("This email is not registered. Create an account instead.");
+        return;
+      }
       await api.post("/auth/send-otp", { email });
       setOtpSent(true);
     } catch (err) {
@@ -59,11 +70,7 @@ export const useLogin = () => {
     try {
       const res = await api.post("/auth/verify-otp", { email, otp });
       login(res.data);
-      if (res.data.isNewUser) {
-        navigate("/profile");
-      } else {
-        navigate("/chat");
-      }
+      navigate(res.data.isProfileComplete ? "/chat" : "/profile");
     } catch (err) {
       setError(err.response?.data?.message || "Invalid OTP");
     } finally {
@@ -76,6 +83,12 @@ export const useLogin = () => {
     e?.preventDefault();
     if (submitting) return;
     otpSent ? handleVerifyOtp() : handleSendOtp();
+  };
+
+  const resetOtp = () => {
+    setOtp("");
+    setOtpSent(false);
+    setError("");
   };
 
   // update one digit of the OTP by box index (used by the segmented input)
@@ -110,6 +123,7 @@ export const useLogin = () => {
     email,
     setEmail,
     otp,
+    resetOtp,
     otpSent,
     error,
     submitting,

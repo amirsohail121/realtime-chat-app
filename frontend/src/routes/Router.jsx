@@ -4,10 +4,15 @@ import Chat from "../pages/Chat";
 import SetupProfile from "../pages/SetupProfile";
 import ProtectedRoute from "./ProtectedRoute"; // your filename
 import Settings from "../pages/Settings";
+import Signup from "../pages/Signup";
 
 const router = createBrowserRouter([
   {
     path: "/",
+    element: <Signup />
+  },
+  {
+    path: "/login",
     element: <Login />
   },
   {

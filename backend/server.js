@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const connectedDB = require("./config/db");
+
 const authRoutes = require("./routes/authRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
@@ -10,6 +11,7 @@ const socketHandler = require("./socket/socketHandler");
 const uploadRoutes = require("./routes/uploadRoutes");
 const userRoutes = require("./routes/userRoutes");
 const startScheduler = require("./utils/scheduler");
+// const callRoutes = require("./routes/callRoutes");
 
 const cors = require("cors");
 
@@ -69,6 +71,9 @@ app.use(
 
 // searchUsers
 app.use("/api/users", userRoutes);
+
+//call
+// app.use("/api/call", callRoutes);
 
 const PORT = process.env.PORT || 3000;
 

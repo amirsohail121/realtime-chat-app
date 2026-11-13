@@ -6,6 +6,21 @@ const generateOtp = require("../utils/generateOtp");
 const generateToken = require("../utils/generateToken");
 
 // send otp
+const checkEmail = async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.exists({ email: email.toLowerCase().trim() });
+    res.status(200).json({ exists: Boolean(user) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const sendOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -162,4 +177,4 @@ const logout = (req, res) => {
   res.status(200).json({ message: "Logged out successfully" });
 };
 
-module.exports = { sendOtp, verifyOtp, completeProfile, getMe, logout };
+module.exports = { checkEmail, sendOtp, verifyOtp, completeProfile, getMe, logout };

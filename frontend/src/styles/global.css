@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #14171F;
+  --paper: #F6F1E9;
+  --surface: #FFFFFF;
+  --surface-soft: #FBF8F3;
+  --line: #E6DECF;
+  --line-soft: #EFE8DB;
+  --input-border: #D9CFBD;
+  --muted: #6B6560;
+  --accent: #C2410C;
+  --accent-tint: #FFF1E8;
+  --accent-on-dark: #FF8A5B;
+  --dark-2: #1F2430;
+  --dark-3: #242B3A;
+  --dark-muted: #9AA3B2;
+  --online: #22C55E;
+  --danger: #B42318;
+  --font-display: "Newsreader", Georgia, serif;
+  --font-body: "Instrument Sans", Arial, sans-serif;
+}
+
+@theme {
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-body);
+}
+
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,600&display=swap");
+
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible {
+  outline: 3px solid rgba(194, 65, 12, .28);
+  outline-offset: 2px;
+}
+.btn {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  display: inline-flex;
+  gap: 9px;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 18px;
+  font-weight: 600;
+  transition: background .2s ease, transform .2s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn--primary { background: var(--accent); color: var(--surface); }
+.btn--primary:hover { background: #A9360A; }
+.btn--full { width: 100%; }
+.icon-btn {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+}
+.tag {
+  align-items: center;
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 999px;
+  color: inherit;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  line-height: 1;
+  min-height: 28px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+.tag svg { height: 14px; width: 14px; }
+.tag--lock { background: var(--accent-tint); border-color: #F3D0B9; color: var(--accent); }
