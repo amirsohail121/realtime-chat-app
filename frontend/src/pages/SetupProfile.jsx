@@ -1,32 +1,40 @@
-import { useState, useContext } from "react";
+import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FiAlertCircle, FiEdit3, FiLoader, FiLock, FiMail, FiPlus, FiUser } from "react-icons/fi";
+import imageCompression from "browser-image-compression";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
-import { generateKeyPair, savePrivateKey, getPrivateKey } from "../utils/crypto";
-import { FiCamera, FiUser, FiMail, FiEdit3, FiAlertCircle, FiLoader } from "react-icons/fi";
-import imageCompression from "browser-image-compression";
+import { generateKeyPair, getPrivateKey, savePrivateKey } from "../utils/crypto";
+import "../styles/pages/signup.css";
+
+function Tag({ children, variant = "" }) {
+  return <span className={`profile-tag${variant ? ` profile-tag--${variant}` : ""}`}>{children}</span>;
+}
+
+function SampleMessage({ name, time, mine, children }) {
+  return (
+    <article className={`profile-message${mine ? " profile-message--mine" : ""}`}>
+      <div className="profile-message__meta"><strong>{name}</strong><span>{time}</span></div>
+      <p>{children}</p>
+    </article>
+  );
+}
 
 export default function SetupProfile() {
   const navigate = useNavigate();
   const { user, login } = useContext(AuthContext);
   const email = user?.email || "";
-
   const [name, setName] = useState(user?.name || "");
   const [bio, setBio] = useState(user?.bio || "");
   const [profilePic, setProfilePic] = useState(user?.profilePic || "");
-  const [profilePicId, setProfilePicId] = useState(user?.profilePicId || "");
-  const [preview, setPreview] = useState(user?.profilePic || null);
+  const [preview, setPreview] = useState(user?.profilePic || "");
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const BIO_LIMIT = 150;
-
-  // ===== HANDLE IMAGE UPLOAD =====
-  const handleImageChange = async (e) => {
-    const file = e.target.files[0];
+  const handleImageChange = async (event) => {
+    const file = event.target.files?.[0];
     if (!file) return;
-
     setPreview(URL.createObjectURL(file));
     setUploading(true);
     setError("");
@@ -38,242 +46,135 @@ export default function SetupProfile() {
         useWebWorker: true,
         initialQuality: 0.8,
       });
-
-      const uploadFile = new File(
-        [compressedBlob],
-        file.name,
-        {
-          type: compressedBlob.type || file.type,
-          lastModified: Date.now(),
-        }
-      );
-
+      const uploadFile = new File([compressedBlob], file.name, {
+        type: compressedBlob.type || file.type,
+        lastModified: Date.now(),
+      });
       const formData = new FormData();
       formData.append("image", uploadFile);
-
-      const res = await api.post("/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      const response = await api.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      setProfilePic(res.data.url);
-      setProfilePicId(res.data.public_id);
-    } catch (err) {
-      console.error("❌ Upload Error:", err.response?.data || err);
-
-      setError(
-        err.response?.data?.message ||
-        "Image upload failed. Please try another image."
-      );
+      setProfilePic(response.data.url);
+    } catch (uploadError) {
+      console.error("Profile photo upload failed", uploadError.response?.data || uploadError);
+      setError(uploadError.response?.data?.message || "Image upload failed. Please try another image.");
     } finally {
       setUploading(false);
     }
   };
 
-  // ===== SAVE =====
-  const handleSave = async () => {
+  const handleSave = async (event) => {
+    event.preventDefault();
     setError("");
-
     if (!name.trim()) {
-      setError("Enter your name");
+      setError("Enter your name.");
       return;
     }
 
     setSaving(true);
-    const savingStartedAt = Date.now();
+    const startedAt = Date.now();
     try {
-      // Check if user already has valid key pair
-      const hasExistingKey =
-        user?.publicKey &&
-        user.publicKey.length > 0 &&
-        getPrivateKey(user._id) !== null;
-
+      const hasExistingKey = user?.publicKey && getPrivateKey(user._id) !== null;
       let publicKey = user?.publicKey || "";
-
       if (!hasExistingKey) {
-        console.log("Generating new key pair...");
-        const { publicKey: pubKey, privateKey } = generateKeyPair();
-        publicKey = pubKey;
-        savePrivateKey(privateKey, user._id);
-        console.log("Key pair generated ✅");
-      } else {
-        console.log("Keeping existing key pair ✅");
-        publicKey = user.publicKey;
+        const keyPair = generateKeyPair();
+        publicKey = keyPair.publicKey;
+        savePrivateKey(keyPair.privateKey, user._id);
       }
 
-      const res = await api.put("/auth/complete-profile", {
-        name,
-        bio,
-        profilePic,
-        publicKey,
-      });
-
-      const elapsed = Date.now() - savingStartedAt;
-      const MIN_LOADER_MS = 600;
-      if (elapsed < MIN_LOADER_MS) {
-        await new Promise((resolve) => setTimeout(resolve, MIN_LOADER_MS - elapsed));
-      }
-
-      login(res.data);
+      const response = await api.put("/auth/complete-profile", { name, bio, profilePic, publicKey });
+      const remaining = 600 - (Date.now() - startedAt);
+      if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
+      login(response.data);
       navigate("/chat");
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to save profile");
+    } catch (saveError) {
+      setError(saveError.response?.data?.message || "Failed to save profile.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background:
-          "linear-gradient(135deg, var(--color-primary-light) 0%, #ffffff 45%, var(--bubble-received-bg) 100%)",
-      }}
-    >
-      <div className="relative bg-[var(--color-surface)] rounded-2xl shadow-xl p-8 w-full max-w-md border border-[var(--color-surface-muted)]">
-        {/* SAVING OVERLAY */}
-        {saving && (
-          <div className="absolute inset-0 z-10 rounded-2xl bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
-            <FiLoader size={32} className="animate-spin text-[var(--color-secondary)]" />
-            <p className="text-sm font-medium text-[var(--color-heading)]">
-              Saving your profile...
-            </p>
-            <p className="text-xs text-[var(--color-body)]">
-              Setting up secure encryption keys
-            </p>
+    <main className="profile-page">
+      <aside className="profile-aside">
+        <div className="profile-rings" aria-hidden="true" />
+        <div className="profile-aside__content">
+          <div className="profile-logo">ChatWave</div>
+          <div className="profile-aside__intro">
+            <h1>Create your account in seconds.</h1>
+            <p>Add a photo, choose your name and start talking. You&apos;re in as soon as you finish.</p>
           </div>
-        )}
-        {/* HEADER */}
-        <div className="text-center mb-7">
-          <h2 className="text-2xl font-bold text-[var(--color-heading)]">
-            Set up your profile
-          </h2>
-          <p className="text-sm text-[var(--color-body)] mt-1">
-            This is how others will see you on ChatWave
-          </p>
+          <div className="profile-thread" aria-label="Sample conversation">
+            <SampleMessage name="Aarav" time="10:38">Standup moved to 10, see you there.</SampleMessage>
+            <SampleMessage name="You" time="10:40" mine>I&apos;ll bring the API notes.</SampleMessage>
+          </div>
+          <div className="profile-aside__tags">
+            <Tag variant="lock"><FiLock aria-hidden="true" /> End-to-end encrypted</Tag>
+            <Tag>Passwordless sign-in</Tag>
+          </div>
         </div>
+      </aside>
 
-        {/* ERROR MESSAGE */}
-        {error && (
-          <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-5 text-sm">
-            <FiAlertCircle className="flex-shrink-0" size={16} />
-            <span>{error}</span>
+      <section className="profile-main" aria-label="Create your profile">
+        <div className="profile-mobile-header">
+          <div className="profile-logo profile-logo--dark">ChatWave</div>
+          <Tag variant="lock"><FiLock aria-hidden="true" /> Secure sign-in</Tag>
+        </div>
+        <form className="profile-card" onSubmit={handleSave}>
+          <div className="profile-card__topline">
+            <div className="profile-logo profile-logo--dark">ChatWave</div>
+            <Tag variant="lock"><FiLock aria-hidden="true" /> Secure sign-in</Tag>
           </div>
-        )}
+          <div className="profile-card__intro">
+            <h2>Create your profile</h2>
+            <p>Your account is ready as soon as you finish. No verification step.</p>
+          </div>
 
-        {/* ===== PROFILE IMAGE ===== */}
-        <div className="flex flex-col items-center mb-7">
-          <label className={`relative group ${saving ? "pointer-events-none opacity-70" : "cursor-pointer"}`}>
-            <div
-              className="w-28 h-28 rounded-full overflow-hidden shadow-md ring-4"
-              style={{ "--tw-ring-color": "var(--color-secondary-light)" }}
-            >
-              {preview ? (
-                <img
-                  src={preview}
-                  alt="Profile Preview"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-[var(--color-primary-light)]">
-                  <FiUser size={40} className="text-[var(--color-secondary)]" />
-                </div>
-              )}
+          {error ? <div className="profile-error" role="alert"><FiAlertCircle aria-hidden="true" /><span>{error}</span></div> : null}
 
-              {/* HOVER OVERLAY */}
-              <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                {uploading ? (
-                  <FiLoader
-                    size={22}
-                    className="text-white animate-spin opacity-100"
-                  />
-                ) : (
-                  <FiCamera
-                    size={22}
-                    className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                  />
-                )}
-              </div>
+          <div className="profile-photo-row">
+            <label className="profile-photo-picker" aria-label="Choose a profile photo">
+              <span className="profile-photo">
+                {preview ? <img src={preview} alt="Profile preview" /> : <FiUser aria-hidden="true" size={28} />}
+              </span>
+              <span className="profile-photo__badge"><FiPlus aria-hidden="true" /></span>
+              <input type="file" accept="image/*" onChange={handleImageChange} disabled={saving} />
+            </label>
+            <div>
+              <div className="profile-photo__title"><strong>Profile photo</strong><Tag>Optional</Tag></div>
+              
+              <label className="profile-upload-button" htmlFor="profile-upload">Upload photo</label>
+              <input id="profile-upload" type="file" accept="image/*" onChange={handleImageChange} disabled={saving} />
             </div>
-
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-          </label>
-
-          <span className="mt-3 text-sm font-medium text-[var(--color-secondary)]">
-            {uploading ? "Uploading..." : "Tap to change photo"}
-          </span>
-        </div>
-
-        {/* ===== EMAIL DISPLAY ===== */}
-        <div className="mb-4 flex items-center gap-3 p-3.5 bg-[var(--color-surface-tint)] rounded-xl">
-          <div className="w-9 h-9 rounded-full bg-[var(--color-primary-light)] flex items-center justify-center flex-shrink-0">
-            <FiMail size={16} className="text-[var(--color-primary,#00A19E)]" />
           </div>
-          <div className="min-w-0">
-            <p className="text-xs text-[var(--color-body)]">Email address</p>
-            <p className="text-sm font-semibold text-[var(--color-heading)] truncate">
-              {email}
-            </p>
+
+          <div className="profile-fields">
+            <label className="profile-field">
+              <span>Full name</span>
+              <span className="profile-input-wrap"><FiUser aria-hidden="true" /><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Full name" autoComplete="name" disabled={saving} required /></span>
+            </label>
+            <label className="profile-field">
+              <span>Email</span>
+              <span className="profile-input-wrap profile-email">
+                <FiMail aria-hidden="true" />
+                <input value={email} readOnly aria-label="Email address" />
+              </span>
+            </label>
+            <label className="profile-field">
+              <span>Bio</span>
+              <span className="profile-input-wrap profile-input-wrap--textarea"><FiEdit3 aria-hidden="true" /><textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={150} rows={3} placeholder="Write a short bio..." disabled={saving} aria-label="Bio" /></span>
+              <small>{bio.length}/150</small>
+            </label>
           </div>
-        </div>
 
-        {/* ===== NAME ===== */}
-        <div className="relative mb-4">
-          <FiUser
-            size={16}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-body)]"
-          />
-          <input
-            type="text"
-            placeholder="Full name"
-            value={name}
-            disabled={saving}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full text-[var(--color-heading)] pl-10 pr-4 py-3 border border-[var(--color-surface-muted)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary-light)] transition-shadow disabled:opacity-60"
-          />
-        </div>
-
-        {/* ===== BIO ===== */}
-        <div className="relative mb-1.5">
-          <FiEdit3
-            size={16}
-            className="absolute left-3.5 top-3.5 text-[var(--color-body)]"
-          />
-          <textarea
-            placeholder="Write a short bio..."
-            value={bio}
-            maxLength={BIO_LIMIT}
-            disabled={saving}
-            onChange={(e) => setBio(e.target.value)}
-            rows={3}
-            className="w-full text-[var(--color-heading)] pl-10 pr-4 py-3 border border-[var(--color-surface-muted)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary-light)] resize-none transition-shadow disabled:opacity-60"
-          />
-        </div>
-        <p className="text-xs text-right text-[var(--color-body)] mb-5">
-          {bio.length}/{BIO_LIMIT}
-        </p>
-
-        {/* ===== SAVE BUTTON ===== */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full text-white font-semibold py-3 rounded-xl cursor-pointer disabled:cursor-not-allowed transition-transform disabled:opacity-70 disabled:hover:scale-100 hover:scale-[1.02] flex items-center justify-center gap-2 shadow-md"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--color-secondary) 0%, #5b3aa8 100%)",
-          }}
-        >
-          {saving && <FiLoader size={16} className="animate-spin" />}
-          {saving ? "Saving..." : "Save & Continue"}
-        </button>
-      </div>
-    </div>
+          <button className="profile-submit" type="submit" disabled={saving}>
+            {saving ? <FiLoader aria-hidden="true" className="profile-spin" /> : null}
+            {saving ? "Creating account..." : "Create account"}
+          </button>
+          <p className="profile-card__footer">Your profile is protected with end-to-end encryption.</p>
+        </form>
+      </section>
+    </main>
   );
 }

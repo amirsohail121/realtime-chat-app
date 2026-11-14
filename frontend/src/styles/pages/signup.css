@@ -1,51 +1,524 @@
-.signup-page {
+/* Main two-column shell: dark brand panel on the left, form panel on the right. */
+.profile-page {
   background: var(--paper);
   display: grid;
-  grid-template-columns: minmax(420px, 560px) 1fr;
-  min-height: 100vh;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
-.signup-main { align-items: center; display: flex; justify-content: center; padding: 36px; }
-.signup-card {
+/* Shared brand panel used by signup, sign-in, OTP, and profile pages. */
+.profile-aside {
+  background: var(--dark-2);
+  color: var(--surface);
+  height: 100%;
+  overflow: hidden;
+  padding: 44px 48px;
+  position: relative;
+}
+/* Decorative rings add depth without competing with the content. */
+.profile-rings {
+  border: 1px solid rgba(246, 241, 233, 0.1);
+  border-radius: 50%;
+  height: 610px;
+  position: absolute;
+  right: -255px;
+  top: 95px;
+  width: 610px;
+}
+.profile-rings::before,
+.profile-rings::after {
+  border: 1px solid rgba(246, 241, 233, 0.1);
+  border-radius: 50%;
+  content: "";
+  left: 80px;
+  position: absolute;
+  top: 80px;
+}
+.profile-rings::before {
+  height: 450px;
+  width: 450px;
+}
+.profile-rings::after {
+  border-color: rgba(194, 65, 12, 0.5);
+  height: 280px;
+  left: 165px;
+  top: 165px;
+  width: 280px;
+}
+/* Keeps the brand content above the decorative rings. */
+.profile-aside__content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+.profile-logo {
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.profile-logo--dark {
+  color: var(--ink);
+}
+/* Intro copy sits below the logo and above the sample conversation. */
+.profile-aside__intro {
+  margin-top: clamp(76px, 13vh, 118px);
+}
+.profile-aside__intro h1 {
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: clamp(32px, 3.2vw, 44px);
+  line-height: 1.15;
+  margin: 0;
+  max-width: 390px;
+}
+.profile-aside__intro p {
+  color: var(--dark-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 16px 0 0;
+  max-width: 360px;
+}
+/* Sample messages demonstrate the visual language of the chat app. */
+.profile-thread {
+  display: grid;
+  gap: 10px;
+  margin: 30px 0 0;
+}
+.profile-message {
   background: var(--surface);
-  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  color: var(--danger);
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  padding: 11px 14px;
+  width: min(400px, 100%);
+}
+.profile-message--mine {
+  background: rgba(194, 65, 12, 0.14);
+  border: 1px solid rgba(255, 138, 91, 0.25);
+  color: var(--paper);
+  margin-left: 0;
+}
+.profile-message__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+}
+.profile-message__meta strong {
+  color: var(--accent);
+}
+.profile-message--mine .profile-message__meta strong {
+  color: var(--accent-on-dark);
+}
+.profile-message__meta span {
+  color: var(--muted);
+}
+.profile-message--mine .profile-message__meta span {
+  color: var(--dark-muted);
+}
+.profile-message p {
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0;
+}
+.profile-aside__tags .profile-tag--lock {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--paper);
+}
+.profile-aside__tags .profile-tag {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--paper);
+}
+/* Security notes stay near the bottom of the brand panel. */
+.profile-aside__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 32px;
+}
+.profile-tag {
+  align-items: center;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  color: var(--paper);
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+.profile-tag--lock {
+  background: var(--accent-tint);
+  border-color: var(--accent-tint);
+  color: var(--accent-text);
+}
+.profile-tag svg {
+  height: 14px;
+  width: 14px;
+}
+/* Centers the form card inside the right-hand panel. */
+.profile-main {
+  display: grid;
+  height: 100%;
+  min-width: 0;
+  overflow: auto;
+  padding: 24px;
+  place-items: center;
+}
+/* White form surface shared by the profile setup screen. */
+.profile-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 20px;
-  box-shadow: 0 18px 50px rgba(20, 23, 31, .08);
-  max-width: 560px;
-  padding: 34px 40px;
+  box-shadow: 0 16px 40px rgba(20, 23, 31, 0.08);
+  max-width: 480px;
+  padding: 32px 36px;
   width: 100%;
 }
-.signup-card__header { align-items: center; display: flex; justify-content: flex-start; }
-.signup-card__intro { margin: 42px 0 28px; }
-.signup-card h1 { font-family: var(--font-display); font-size: 42px; letter-spacing: -.045em; line-height: 1; margin: 9px 0 12px; }
-.signup-card__intro p:last-child { color: var(--muted); line-height: 1.6; margin: 0; }
-.eyebrow--light { color: var(--accent); margin: 0; }
-.tag--optional { background: var(--surface-soft); border-color: var(--line); color: var(--muted); min-height: 24px; }
-.photo-upload { align-items: center; display: flex; gap: 16px; margin-bottom: 25px; }
-.photo-upload__circle { align-items: center; background: var(--surface-soft); border: 1px dashed var(--input-border); border-radius: 50%; color: var(--accent); display: flex; height: 74px; justify-content: center; overflow: hidden; width: 74px; }
-.photo-upload__circle svg { height: 22px; width: 22px; }
-.photo-upload__circle img { height: 100%; object-fit: cover; width: 100%; }
-.photo-upload__circle input { display: none; }
-.photo-upload p { font-weight: 600; margin: 5px 0 2px; }
-.photo-upload small { color: var(--muted); font-size: 12px; }
-.signup-fields { display: grid; gap: 17px; }
-.available-tag { align-items: center; color: var(--online); display: inline-flex; font-size: 11px; font-weight: 500; gap: 3px; margin-left: 6px; }
-.available-tag svg { height: 13px; width: 13px; }
-.terms { align-items: flex-start; color: var(--muted); display: flex; font-size: 12px; gap: 9px; line-height: 1.5; margin: 24px 0; }
-.terms input { accent-color: var(--accent); height: 16px; margin: 1px 0 0; width: 16px; }
-.terms button, .signup-card__footer button { background: none; border: 0; color: var(--accent); font-weight: 600; padding: 0; }
-.signup-card__footer { color: var(--muted); margin: 22px 0 0; text-align: center; }
-.mobile-signup-header { display: none; }
-@media (max-width: 560px) {
-  .signup-page { display: block; }
-  .signup-page > .login-aside { display: none; }
-  .signup-main { align-items: flex-start; min-height: 100vh; padding: 28px 18px; }
-  .mobile-signup-header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 48px; width: 100%; }
-  .signup-card { border: 0; box-shadow: none; padding: 0; }
-  .signup-card__header .tag { font-size: 11px; }
-  .signup-card__intro { margin-top: 54px; }
-  .signup-card h1 { font-size: 38px; }
+.profile-card__topline,
+.profile-photo__title {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
 }
-@media (min-width: 561px) and (max-width: 1099px) {
-  .signup-page { grid-template-columns: minmax(340px, 43%) 1fr; }
-  .signup-main { padding: 24px; }
+/* Form heading and supporting explanation. */
+.profile-card__intro {
+  margin: 24px 0 26px;
+}
+.profile-card__intro h2 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  margin: 0;
+}
+.profile-card__intro p,
+.profile-card__footer {
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 8px 0 0;
+}
+/* API and validation errors are shown above the form fields. */
+.profile-error {
+  align-items: center;
+  background: #fdecea;
+  border: 1px solid #f3c6c1;
+  border-radius: 10px;
+  color: var(--danger);
+  display: flex;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+}
+/* Profile photo picker and upload action. */
+.profile-photo-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  margin: 14px 0 18px;
+  padding: 0;
+}
+.profile-photo-picker {
+  min-height: 84px;
+  position: relative;
+  width: 84px;
+}
+.profile-photo {
+  align-items: center;
+  background: var(--surface-soft);
+  border: 2px dashed var(--dashed-border);
+  border-radius: 50%;
+  color: var(--accent);
+  display: flex;
+  height: 64px;
+  justify-content: center;
+  overflow: hidden;
+  width: 64px;
+}
+.profile-photo img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+.profile-photo-picker input,
+.profile-upload-button + input {
+  display: none;
+}
+.profile-photo__badge {
+  align-items: center;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  bottom: -1px;
+  color: var(--surface);
+  display: flex;
+  height: 20px;
+  justify-content: center;
+  position: absolute;
+  right: 0;
+  width: 20px;
+}
+.profile-photo__badge svg {
+  height: 11px;
+  width: 11px;
+}
+.profile-photo__title {
+  align-items: center;
+  display: flex;
+  font-size: 13px;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.profile-photo__title .profile-tag {
+  display: none;
+}
+.profile-photo-row > div {
+  display: grid;
+  gap: 5px;
+}
+.profile-photo-row > div::before {
+  display: none;
+}
+.profile-upload-button {
+  border: 1px solid var(--outline-button-border);
+  border-radius: 10px;
+  color: var(--text-2);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  min-height: 28px;
+  order: 3;
+  padding: 6px 12px;
+}
+/* Keeps all profile fields at a consistent vertical rhythm. */
+.profile-fields {
+  display: grid;
+  gap: 11px;
+}
+.profile-field {
+  color: var(--text-2);
+  display: grid;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 7px;
+}
+/* Shared input shell for name, email, and bio controls. */
+.profile-input-wrap {
+  align-items: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  display: flex;
+  gap: 9px;
+  padding: 0 14px;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.profile-input-wrap:hover {
+  border-color: var(--dashed-border);
+}
+.profile-input-wrap:focus-within {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.profile-input-wrap svg,
+.profile-email > svg {
+  color: var(--muted);
+  flex: 0 0 auto;
+  transition: color 0.2s ease;
+}
+.profile-input-wrap:focus-within svg {
+  color: var(--accent);
+}
+.profile-input-wrap input,
+.profile-input-wrap input:focus,
+.profile-input-wrap input:focus-visible,
+.profile-input-wrap textarea,
+.profile-input-wrap textarea:focus,
+.profile-input-wrap textarea:focus-visible {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--ink);
+  outline: none;
+}
+.profile-input-wrap input {
+  font-size: 15px;
+  font-weight: 500;
+  height: 40px;
+  min-width: 0;
+  width: 100%;
+}
+.profile-input-wrap input::placeholder,
+.profile-input-wrap textarea::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}
+.profile-input-wrap--textarea {
+  align-items: flex-start;
+  padding-top: 12px;
+}
+.profile-input-wrap textarea {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  min-width: 0;
+  outline: 0;
+  resize: vertical;
+  width: 100%;
+}
+.profile-field small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  text-align: right;
+}
+.profile-email {
+  cursor: default;
+}
+/* Primary action that completes profile creation. */
+.profile-submit {
+  align-items: center;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  color: var(--surface);
+  cursor: pointer;
+  display: flex;
+  font-weight: 600;
+  gap: 9px;
+  justify-content: center;
+  letter-spacing: 0.01em;
+  margin-top: 22px;
+  min-height: 48px;
+  padding: 0 18px;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+  width: 100%;
+}
+.profile-submit:hover {
+  background: #A9360A;
+  color: var(--surface);
+}
+.profile-submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.profile-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.profile-card__footer {
+  font-size: 12px;
+  text-align: center;
+}
+.profile-mobile-header {
+  display: none;
+}
+.profile-spin {
+  animation: profile-spin 1s linear infinite;
+}
+@keyframes profile-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Tablet layout: preserve the split view with tighter spacing. */
+@media (max-width: 1099px) {
+  .profile-aside {
+    padding: 36px 34px;
+  }
+  .profile-aside__intro {
+    margin-top: 100px;
+  }
+  .profile-aside__intro h1 {
+    font-size: 38px;
+  }
+  .profile-aside__tags {
+    margin-top: 64px;
+  }
+  .profile-main {
+    padding: 24px;
+  }
+}
+/* Mobile layout: stack the brand panel above the form for easy scrolling. */
+@media (max-width: 699px) {
+  .profile-page {
+    display: block;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+  .profile-aside {
+    display: block;
+    height: auto;
+    min-height: 360px;
+    padding: 32px 28px;
+  }
+  .profile-aside__content {
+    height: auto;
+  }
+  .profile-aside__intro {
+    margin-top: 72px;
+  }
+  .profile-aside__intro h1 {
+    font-size: 34px;
+  }
+  .profile-thread {
+    display: grid;
+    margin-top: 28px;
+  }
+  .profile-message {
+    width: 100%;
+  }
+  .profile-aside__tags {
+    margin-top: 32px;
+  }
+  .profile-main {
+    align-items: flex-start;
+    display: block;
+    min-height: 100dvh;
+    overflow: visible;
+    padding: 16px;
+  }
+  .profile-mobile-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .profile-card {
+    box-shadow: none;
+    padding: 22px 20px;
+  }
+  .profile-card__topline .profile-logo {
+    display: none;
+  }
+  .profile-card__intro h2 {
+    font-size: 30px;
+  }
+  .profile-photo-row {
+    padding: 12px;
+  }
+  .profile-photo,
+  .profile-photo-picker {
+    height: 72px;
+    width: 72px;
+  }
 }

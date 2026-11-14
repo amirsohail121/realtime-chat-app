@@ -3,14 +3,10 @@ import { LuArrowRight, LuLock } from "react-icons/lu";
 import { OTP_LENGTH, useLogin } from "../hooks/useLogin";
 import { useNavigate } from "react-router-dom";
 import "../styles/pages/login.css";
+import "../styles/pages/signup.css";
 
 function Logo({ inverse = false }) {
-  return (
-    <div className={`brand-mark${inverse ? " brand-mark--inverse" : ""}`}>
-      <span className="brand-mark__dot" aria-hidden="true" />
-      <span>ChatWave</span>
-    </div>
-  );
+  return <div className={`profile-logo${inverse ? "" : " profile-logo--dark"}`}>ChatWave</div>;
 }
 
 function Tag({ children, variant = "" }) {
@@ -19,8 +15,8 @@ function Tag({ children, variant = "" }) {
 
 function SampleMessage({ name, time, children, mine = false }) {
   return (
-    <div className={`sample-message${mine ? " sample-message--mine" : ""}`}>
-      <div className="sample-message__meta">
+    <div className={`profile-message${mine ? " profile-message--mine" : ""}`}>
+      <div className="profile-message__meta">
         <strong>{name}</strong>
         <span>{time}</span>
       </div>
@@ -31,22 +27,18 @@ function SampleMessage({ name, time, children, mine = false }) {
 
 export function AuthAside() {
   return (
-    <aside className="login-aside">
-      <div className="login-aside__rings" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
-      <div className="login-aside__content">
+    <aside className="login-aside profile-aside">
+      <div className="profile-rings" aria-hidden="true" />
+      <div className="profile-aside__content">
         <Logo inverse />
-        <div className="login-aside__intro">
+        <div className="profile-aside__intro login-aside__intro">
           <p className="eyebrow">A quieter way to connect</p>
           <h1>Conversations, kept in order.</h1>
           <p className="login-aside__copy">
             A considered place for the people and ideas you want to keep close.
           </p>
         </div>
-        <div className="sample-thread" aria-label="Sample conversation">
+        <div className="profile-thread" aria-label="Sample conversation">
           <SampleMessage name="Maya Chen" time="10:42">
             The notes are ready whenever you are.
           </SampleMessage>
@@ -54,9 +46,9 @@ export function AuthAside() {
             Perfect. I&apos;ll look through them this afternoon.
           </SampleMessage>
         </div>
-        <div className="login-aside__tags">
-          <Tag><LuLock aria-hidden="true" /> End-to-end encrypted</Tag>
-          <Tag>◎ Passwordless sign-in</Tag>
+        <div className="profile-aside__tags">
+          <span className="profile-tag"><LuLock aria-hidden="true" /> End-to-end encrypted</span>
+          <span className="profile-tag">◎ Passwordless sign-in</span>
         </div>
       </div>
     </aside>
@@ -172,6 +164,7 @@ export default function Login({ mode = "login" }) {
         </div>
         <div className="auth-card">
           <div className="auth-card__topline">
+            <Logo />
             <Tag variant="lock"><LuLock aria-hidden="true" /> Secure sign-in</Tag>
           </div>
           <h2>{otpSent ? "Check your email" : mode === "signup" ? "Create your account" : "Welcome back"}</h2>

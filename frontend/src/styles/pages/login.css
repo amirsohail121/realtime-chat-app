@@ -158,7 +158,7 @@
   left: 169px;
   top: 169px;
   width: 260px;
-  border-color: rgba(255, 138, 91, 0.22);
+  border-color: rgba(194, 65, 12, 0.5);
 }
 .login-main {
   align-items: center;
@@ -182,6 +182,9 @@
   align-items: center;
   display: flex;
   justify-content: space-between;
+}
+.auth-card__topline .profile-logo {
+  font-size: 24px;
 }
 .auth-card h2 {
   font-size: clamp(30px, 3.2vw, 42px);
@@ -323,6 +326,9 @@
     padding: 0;
   }
   .auth-card__topline .tag {
+    display: none;
+  }
+  .auth-card__topline .profile-logo {
     display: none;
   }
   .auth-card h2 {
